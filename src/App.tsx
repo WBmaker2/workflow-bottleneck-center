@@ -3,6 +3,7 @@ import { getScenario, scenarioCatalog } from "./data/scenarios";
 import { BriefingScreen } from "./features/briefing/BriefingScreen";
 import { LiveStatus } from "./components/LiveStatus";
 import { UpdateHistoryButton } from "./components/UpdateHistoryButton";
+import { RelationScreen } from "./features/relations/RelationScreen";
 
 const stageLabels = {
   briefing: "안내",
@@ -45,6 +46,13 @@ function AppShell() {
         <p>{`현재 단계: ${stageLabels[attempt.stage]}`}</p>
         {attempt.stage === "briefing" ? (
           <BriefingScreen scenario={scenario} attempt={attempt} dispatch={dispatch} />
+        ) : attempt.stage === "relations" ? (
+          <RelationScreen
+            scenario={scenario}
+            attempt={attempt}
+            onChange={(edges) => dispatch({ type: "SET_RELATIONS", edges })}
+            onContinue={() => dispatch({ type: "ENTER_STAGE", stage: "schedule" })}
+          />
         ) : (
           <section aria-labelledby="next-stage-title">
             <h3 id="next-stage-title">{stageLabels[attempt.stage]}</h3>
