@@ -1,10 +1,57 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useEffect, useRef, useState } from "react";
 import { axe } from "vitest-axe";
 import * as axeMatchers from "vitest-axe/matchers";
 import { App } from "../../src/App";
+import { ModalDialog } from "../../src/components/ModalDialog";
 
 expect.extend(axeMatchers);
+
+function CallbackChangingDialog({ version = 1 }: { version?: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>열기</button>
+      <ModalDialog open={open} title={`대화 ${version}`} onClose={() => setOpen(false)}>
+        <button type="button">첫 번째 조작</button>
+        <button type="button">마지막 조작</button>
+      </ModalDialog>
+    </>
+  );
+}
+
+function PairedDialogs() {
+  const [closed, setClosed] = useState<string[]>([]);
+  const [open, setOpen] = useState({ first: true, second: true });
+  return (
+    <>
+      <p data-testid="closed-dialogs">{closed.join(",")}</p>
+      <ModalDialog open={open.first} title="첫 번째 대화" onClose={() => { setClosed((items) => [...items, "first"]); setOpen((value) => ({ ...value, first: false })); }}>
+        첫 번째 내용
+      </ModalDialog>
+      <ModalDialog open={open.second} title="두 번째 대화" onClose={() => { setClosed((items) => [...items, "second"]); setOpen((value) => ({ ...value, second: false })); }}>
+        두 번째 내용
+      </ModalDialog>
+    </>
+  );
+}
+
+function InertDialog({ existingInert = false }: { existingInert?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const inertRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (existingInert) inertRef.current?.setAttribute("inert", "preserved");
+  }, [existingInert]);
+  return (
+    <div data-testid="dialog-parent">
+      <button type="button" data-testid="background-control">배경 조작</button>
+      <div ref={inertRef} data-testid="already-inert">배경 내용</div>
+      <button type="button" onClick={() => setOpen(true)}>열기</button>
+      <ModalDialog open={open} title="배경 보호" onClose={() => setOpen(false)}>내용</ModalDialog>
+    </div>
+  );
+}
 
 it("shows every task-card judgment field before confirmation", () => {
   render(<App />);
@@ -36,6 +83,63 @@ it("shows transparent goals, human-centered guidance, and save default off", () 
 it("keeps the briefing shell accessible", async () => {
   const { container } = render(<App />);
   expect((await axe(container)).violations).toHaveLength(0);
+});
+
+it("does not restore trigger focus when an open dialog rerenders with a new inline callback", async () => {
+  const user = userEvent.setup();
+  const view = render(<CallbackChangingDialog />);
+  await user.click(screen.getByRole("button", { name: "열기" }));
+  const closeButton = screen.getByRole("button", { name: "닫기" });
+  expect(closeButton).toHaveFocus();
+  view.rerender(<CallbackChangingDialog version={2} />);
+  expect(closeButton).toHaveFocus();
+});
+
+it("returns focus inside the dialog when Tab starts outside it", async () => {
+  const user = userEvent.setup();
+  render(<CallbackChangingDialog />);
+  const trigger = screen.getByRole("button", { name: "열기" });
+  await user.click(trigger);
+  const dialog = screen.getByRole("dialog", { name: "대화 1" });
+  const focusables = within(dialog).getAllByRole("button");
+  const outside = document.createElement("button");
+  outside.textContent = "외부 조작";
+  document.body.append(outside);
+  outside.focus();
+  await user.tab();
+  expect(document.activeElement).toBe(focusables[0]);
+  outside.focus();
+  await user.tab({ shift: true });
+  expect(document.activeElement).toBe(focusables.at(-1));
+  outside.remove();
+});
+
+it("gives each dialog a unique label and only the topmost dialog handles Escape", async () => {
+  const user = userEvent.setup();
+  render(<PairedDialogs />);
+  const dialogs = screen.getAllByRole("dialog");
+  expect(new Set(dialogs.map((dialog) => dialog.getAttribute("aria-labelledby"))).size).toBe(2);
+  expect(dialogs[0]).toHaveAttribute("aria-modal", "true");
+  await user.keyboard("{Escape}");
+  expect(screen.getByTestId("closed-dialogs")).toHaveTextContent("second");
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  expect(screen.getByRole("dialog", { name: "첫 번째 대화" })).toBeVisible();
+});
+
+it("makes background siblings inert and restores their original attributes", async () => {
+  const user = userEvent.setup();
+  const view = render(<InertDialog />);
+  await user.click(screen.getByRole("button", { name: "열기" }));
+  expect(screen.getByTestId("background-control")).toHaveAttribute("inert");
+  expect(screen.getByTestId("already-inert")).toHaveAttribute("inert");
+  await user.click(screen.getByRole("button", { name: "닫기" }));
+  expect(screen.getByTestId("background-control")).not.toHaveAttribute("inert");
+  expect(screen.getByTestId("already-inert")).not.toHaveAttribute("inert");
+
+  view.rerender(<InertDialog existingInert />);
+  await user.click(screen.getByRole("button", { name: "열기" }));
+  await user.click(screen.getByRole("button", { name: "닫기" }));
+  expect(screen.getByTestId("already-inert")).toHaveAttribute("inert", "preserved");
 });
 
 it("opens dated update history and restores focus on close", async () => {
