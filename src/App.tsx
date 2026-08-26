@@ -5,6 +5,7 @@ import { LiveStatus } from "./components/LiveStatus";
 import { UpdateHistoryButton } from "./components/UpdateHistoryButton";
 import { RelationScreen } from "./features/relations/RelationScreen";
 import { ScheduleScreen } from "./features/schedule/ScheduleScreen";
+import { SimulationScreen } from "./features/simulation/SimulationScreen";
 
 const stageLabels = {
   briefing: "안내",
@@ -64,6 +65,15 @@ function AppShell() {
               dispatch({ type: "SAVE_INITIAL_SNAPSHOT", snapshot });
               dispatch({ type: "ENTER_STAGE", stage: "simulation" });
             }}
+          />
+        ) : attempt.stage === "simulation" && attempt.initialSnapshot ? (
+          <SimulationScreen
+            scenario={scenario}
+            snapshot={attempt.initialSnapshot}
+            prediction={attempt.prediction}
+            predictionExplanation={attempt.predictionExplanation}
+            onSubmit={(reason, explanation) => dispatch({ type: "SET_PREDICTION", reason, explanation })}
+            onEnterAnalysis={() => dispatch({ type: "ENTER_STAGE", stage: "analysis" })}
           />
         ) : (
           <section aria-labelledby="next-stage-title">
