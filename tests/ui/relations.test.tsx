@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "vitest-axe";
 import { RelationScreen } from "../../src/features/relations/RelationScreen";
@@ -76,5 +76,38 @@ describe("accessible relationship design", () => {
     const attempt = { ...createInitialState().attempts[scenario.id]!, stage: "relations" as const, conditionsAcknowledged: true, relationEdges: [] };
     const { container } = render(<RelationScreen scenario={scenario} attempt={attempt} onChange={() => undefined} onContinue={() => undefined} />);
     expect((await axe(container)).violations).toHaveLength(0);
+  });
+
+  it.each([
+    ["unknown", [{ beforeTaskId: "missing-task", afterTaskId: "verify-content" }], "알 수 없는 작업을 포함해 관계를 확인해야 합니다."],
+    ["cycle", [{ beforeTaskId: "verify-content", afterTaskId: "prepare-print-file" }, { beforeTaskId: "prepare-print-file", afterTaskId: "verify-content" }], "작업이 서로를 기다리는 순환 관계라 확인해야 합니다."],
+    ["duplicate", [{ beforeTaskId: "verify-content", afterTaskId: "prepare-print-file" }, { beforeTaskId: "verify-content", afterTaskId: "prepare-print-file" }], "같은 관계가 두 번 있어 하나만 남겨야 합니다."],
+  ] as const)("describes %s invalid rows without safe extra wording", (kind, edges, neutralMessage) => {
+    const scenario = getScenario("science-display");
+    const attempt = { ...createInitialState().attempts[scenario.id]!, stage: "relations" as const, conditionsAcknowledged: true, relationEdges: edges };
+    render(<RelationScreen scenario={scenario} attempt={attempt} onChange={() => undefined} onContinue={() => undefined} />);
+    const relationList = within(document.querySelector("ol.relation-list")!);
+    expect(relationList.getAllByRole("listitem").some((item) => item.textContent?.includes("이 관계는 안전하지만"))).toBe(false);
+    expect(screen.getByRole("alert")).toHaveTextContent(neutralMessage);
+    expect(relationList.getAllByRole("listitem").length).toBe(edges.length);
+  });
+
+  it("renders duplicate rows without React key warnings and allows deleting one", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const scenario = getScenario("science-display");
+    const edge = { beforeTaskId: "verify-content", afterTaskId: "prepare-print-file" } as const;
+    function Fixture() {
+      const [edges, setEdges] = useState<readonly DependencyEdge[]>([edge, edge]);
+      const attempt = { ...createInitialState().attempts[scenario.id]!, stage: "relations" as const, conditionsAcknowledged: true, relationEdges: edges };
+      return <RelationScreen scenario={scenario} attempt={attempt} onChange={setEdges} onContinue={() => undefined} />;
+    }
+    render(<Fixture />);
+    const relationList = within(document.querySelector("ol.relation-list")!);
+    expect(relationList.getAllByRole("listitem")).toHaveLength(2);
+    expect(error).not.toHaveBeenCalledWith(expect.stringContaining("Each child in a list should have a unique"));
+    await user.click(relationList.getAllByRole("button", { name: "자료 확인과 인쇄 글 정리 관계 삭제" })[0]!);
+    expect(relationList.getAllByRole("listitem")).toHaveLength(1);
+    error.mockRestore();
   });
 });
