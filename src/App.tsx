@@ -113,6 +113,7 @@ function AppShell() {
             onEvidenceChange={(field, value) => dispatch({ type: "SET_EVIDENCE_FIELD", field, value })}
             onComplete={() => dispatch({ type: "COMPLETE_MISSION" })}
             onClearSavedProgress={() => setClearDialogOpen(true)}
+            clearTriggerRef={clearTriggerRef}
           />
         ) : (
           <section aria-labelledby="next-stage-title">
@@ -123,7 +124,7 @@ function AppShell() {
       </section>
       <ModalDialog open={clearDialogOpen} title="저장된 진행 지우기" returnFocusRef={clearTriggerRef} onClose={() => setClearDialogOpen(false)}>
         <p>이 기기에 저장된 진행을 지울까요? 현재 화면의 활동은 계속 사용할 수 있습니다.</p>
-        <button ref={clearTriggerRef} type="button" onClick={() => { dispatch({ type: "SET_SAVE_ENABLED", enabled: false }); setClearDialogOpen(false); }}>저장된 진행 지우기 확인</button>
+        <button type="button" onClick={() => { dispatch({ type: "SET_SAVE_ENABLED", enabled: false }); setClearDialogOpen(false); }}>저장된 진행 지우기 확인</button>
       </ModalDialog>
       <UpdateHistoryButton />
     </main>

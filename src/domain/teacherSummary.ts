@@ -11,7 +11,6 @@ export interface TeacherSummary {
   conditionSummary: readonly string[];
   disclaimer: string;
 }
-
 const DISCLAIMER = "이 결과는 교육용 가상 모델이며 실제 사람의 생산성 평가에 사용할 수 없습니다.";
 const evidenceFields = ["dependencyExplanation", "parallelExplanation", "bottleneckExplanation", "tradeoffExplanation"] as const;
 
@@ -39,4 +38,3 @@ export function buildTeacherSummary(scenario: ScenarioDefinition, attempt: Missi
     disclaimer: DISCLAIMER,
   };
 }
-

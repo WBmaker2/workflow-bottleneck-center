@@ -203,4 +203,35 @@ describe("learning-state reducer", () => {
     const snapshotSaved = appReducer(revisionState, { type: "SAVE_REVISED_SNAPSHOT", snapshot: snapshot(), comparison: completedAttempt.comparison });
     expect(snapshotSaved.attempts["science-display"]!.completed).toBe(false);
   });
+
+  it("rejects direct completion after a valid evidence sentence is replaced with a short value", () => {
+    const base = createInitialState().attempts["science-display"]!;
+    const complete = {
+      ...base,
+      stage: "report" as const,
+      initialSnapshot: snapshot(),
+      revisedSnapshot: snapshot(),
+      comparison: { finishDelta: 0, waitDelta: 0, changedTaskIds: [], preserved: { safety: true, quality: true, fairness: true }, summary: "" },
+      evidence: { dependencyExplanation: "선행 관계를 충분히 설명한 문장입니다.", parallelExplanation: "병렬 관계를 충분히 설명한 문장입니다.", bottleneckExplanation: "표시된 병목이 없다는 사실을 설명합니다.", tradeoffExplanation: "안전 품질 역할 공정성을 함께 지킨 절충입니다." },
+    };
+    const state = { ...createInitialState(), attempts: { ...createInitialState().attempts, "science-display": complete } };
+    const invalid = appReducer(state, { type: "SET_EVIDENCE_FIELD", field: "dependencyExplanation", value: "짧음" });
+    const rejected = appReducer(invalid, { type: "COMPLETE_MISSION" });
+    expect(rejected.attempts["science-display"]!.completed).toBe(false);
+  });
+
+  it("allows direct completion from hydrated complete evidence without editing", () => {
+    const base = createInitialState().attempts["science-display"]!;
+    const hydrated = {
+      ...base,
+      stage: "report" as const,
+      initialSnapshot: snapshot(),
+      revisedSnapshot: snapshot(),
+      comparison: { finishDelta: 0, waitDelta: 0, changedTaskIds: [], preserved: { safety: true, quality: true, fairness: true }, summary: "" },
+      evidence: { dependencyExplanation: "선행 관계를 충분히 설명한 문장입니다.", parallelExplanation: "병렬 관계를 충분히 설명한 문장입니다.", bottleneckExplanation: "표시된 병목이 없다는 사실을 설명합니다.", tradeoffExplanation: "안전 품질 역할 공정성을 함께 지킨 절충입니다." },
+    };
+    const state = { ...createInitialState(), attempts: { ...createInitialState().attempts, "science-display": hydrated } };
+    const completed = appReducer(state, { type: "COMPLETE_MISSION" });
+    expect(completed.attempts["science-display"]!.completed).toBe(true);
+  });
 });

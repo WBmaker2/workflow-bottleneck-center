@@ -6,7 +6,6 @@ export interface TeacherSummaryViewProps {
   scenario: ScenarioDefinition;
   attempt: MissionAttempt;
 }
-
 export function TeacherSummaryView({ scenario, attempt }: TeacherSummaryViewProps) {
   let summary;
   try {
@@ -27,4 +26,3 @@ export function TeacherSummaryView({ scenario, attempt }: TeacherSummaryViewProp
     <button type="button" className="print-summary-button" onClick={() => window.print()}>교사용 요약 인쇄</button>
   </section>;
 }
-

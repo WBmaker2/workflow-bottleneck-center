@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import type { MissionAttempt } from "../../app/appTypes";
 import type { ScenarioDefinition } from "../../domain/types";
 import { isEvidenceComplete } from "../../domain/teacherSummary";
@@ -13,6 +13,7 @@ export interface ReportScreenProps {
   onEvidenceChange(field: keyof MissionAttempt["evidence"], value: string): void;
   onComplete(): void;
   onClearSavedProgress?(): void;
+  clearTriggerRef?: RefObject<HTMLButtonElement | null>;
 }
 
 const titleFor = (scenario: ScenarioDefinition, taskId: string) => scenario.tasks.find((task) => task.id === taskId)?.title ?? taskId;
@@ -21,7 +22,7 @@ const scheduleText = (scenario: ScenarioDefinition, snapshot: NonNullable<Missio
   .map((run) => `${run.actualStart}단위: ${titleFor(scenario, run.taskId)} (${run.end - run.actualStart}단위)`).join(" · ");
 const safeQuality = (attempt: MissionAttempt) => Boolean(attempt.revisedSnapshot?.evaluation.metrics.safetyMet && attempt.revisedSnapshot.evaluation.metrics.qualityMet && !attempt.revisedSnapshot.evaluation.violations.some(({ kind }) => kind === "safety" || kind === "quality"));
 
-export function ReportScreen({ scenario, attempt, saveEnabled = false, onEvidenceChange, onComplete, onClearSavedProgress }: ReportScreenProps) {
+export function ReportScreen({ scenario, attempt, saveEnabled = false, onEvidenceChange, onComplete, onClearSavedProgress, clearTriggerRef }: ReportScreenProps) {
   const formRef = useRef<EvidenceFormHandle>(null);
   const [message, setMessage] = useState("");
   const complete = () => {
@@ -55,6 +56,6 @@ export function ReportScreen({ scenario, attempt, saveEnabled = false, onEvidenc
     <TeacherSummaryView scenario={scenario} attempt={attempt} />
     <p role="status" aria-live="polite">{message}</p>
     <button type="button" data-pulse={attempt.completed ? undefined : "true"} onClick={complete} disabled={attempt.completed}>개선 보고서 완성</button>
-    {saveEnabled && onClearSavedProgress && <button type="button" onClick={onClearSavedProgress}>저장된 진행 지우기</button>}
+    {onClearSavedProgress && <button ref={clearTriggerRef} type="button" aria-disabled={!saveEnabled} onClick={() => { if (saveEnabled) onClearSavedProgress(); }}>저장된 진행 지우기</button>}
   </section>;
 }

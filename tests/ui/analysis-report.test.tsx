@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { useState } from "react";
+import { createRef, useState } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "vitest-axe";
@@ -79,6 +79,58 @@ describe("analysis and revision learning flow", () => {
     await user.click(screen.getByRole("button", { name: "근거 문장 확인" }));
     expect(screen.getByRole("alert")).toHaveTextContent("네 가지 근거 문장을 모두 완성하세요.");
     expect(screen.getByLabelText("선행 관계 설명")).toHaveFocus();
+  });
+
+  it("hydrates complete evidence, then clears only a section when its edit becomes invalid", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const persisted = "자료 확인 뒤 인쇄 글을 준비해야 품질을 지킬 수 있습니다.";
+    render(<EvidenceForm scenario={scenario} attempt={{ evidence: { dependencyExplanation: persisted, parallelExplanation: persisted, bottleneckExplanation: persisted, tradeoffExplanation: persisted }, selectedFindingId: null }} onChange={onChange} />);
+    expect(screen.getAllByText(new RegExp(`저장된 근거 문장: ${persisted}`))).toHaveLength(4);
+    const dependencyText = screen.getByLabelText("선행 관계 설명");
+    await user.type(dependencyText, "수정");
+    expect(onChange).toHaveBeenLastCalledWith("dependencyExplanation", "");
+    expect(onChange).not.toHaveBeenCalledWith("parallelExplanation", "");
+    await user.click(screen.getByRole("button", { name: "근거 문장 확인" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("네 가지 근거 문장을 모두 완성하세요.");
+  });
+
+  it("uses a real task and exactly zero units for an honest no-wait bottleneck sentence", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<EvidenceForm scenario={scenario} attempt={{ evidence: { dependencyExplanation: "", parallelExplanation: "", bottleneckExplanation: "", tradeoffExplanation: "" }, selectedFindingId: null, initialSnapshot: { ...snapshot(), bottlenecks: { criticalTaskIds: [], findings: [], totalWaitUnits: 0 }, result: { ...snapshot().result, waits: [] } } }} onChange={onChange} />);
+    expect(screen.getByText("이번 실행에는 표시된 병목과 기다림이 없습니다.")).toBeVisible();
+    await user.selectOptions(screen.getByRole("combobox", { name: "기다림을 설명할 작업 선택" }), "verify-content");
+    expect(screen.getByRole("combobox", { name: "기다림 단위 선택" })).toHaveValue("0");
+    await user.type(screen.getByLabelText("병목 근거 설명"), "실제로 기다림이 없었기 때문입니다");
+    expect(onChange).toHaveBeenLastCalledWith("bottleneckExplanation", expect.stringContaining("표시된 병목이 없기 때문에 자료 확인 작업이 0단위 기다렸습니다."));
+    expect(onChange.mock.calls.some(([field, value]) => field === "bottleneckExplanation" && String(value).includes("WaitReason"))).toBe(false);
+  });
+
+  it("can complete a hydrated no-wait report without creating a finding or wait", async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    const noWait = snapshot({ bottlenecks: { criticalTaskIds: [], findings: [], totalWaitUnits: 0 }, result: { ...snapshot().result, waits: [] } });
+    const evidence = { dependencyExplanation: "선행 관계를 충분히 설명한 문장입니다.", parallelExplanation: "병렬 관계를 충분히 설명한 문장입니다.", bottleneckExplanation: "표시된 병목이 없다는 사실을 설명합니다.", tradeoffExplanation: "안전 품질 역할 공정성을 함께 지킨 절충입니다." };
+    const attempt = { scenarioId: scenario.id, stage: "report", conditionsAcknowledged: true, relationEdges: [], draftSchedule: draft, initialSnapshot: noWait, prediction: null, predictionExplanation: "", selectedFindingId: null, revisedSchedule: draft, revisedSnapshot: noWait, comparison: { finishDelta: 0, waitDelta: 0, changedTaskIds: [], preserved: { safety: true, quality: true, fairness: true }, summary: "" }, evidence, completed: false } satisfies MissionAttempt;
+    render(<ReportScreen scenario={scenario} attempt={attempt} onEvidenceChange={() => undefined} onComplete={onComplete} />);
+    expect(noWait.result.waits).toHaveLength(0);
+    expect(noWait.bottlenecks.findings).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "개선 보고서 완성" }));
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the clear trigger focusable and inert while saving is off", async () => {
+    const user = userEvent.setup();
+    const clear = vi.fn();
+    const triggerRef = createRef<HTMLButtonElement>();
+    render(<ReportScreen scenario={scenario} attempt={{ scenarioId: scenario.id, stage: "report", conditionsAcknowledged: true, relationEdges: [], draftSchedule: draft, initialSnapshot: null, prediction: null, predictionExplanation: "", selectedFindingId: null, revisedSchedule: null, revisedSnapshot: null, comparison: null, evidence: { dependencyExplanation: "", parallelExplanation: "", bottleneckExplanation: "", tradeoffExplanation: "" }, completed: false } satisfies MissionAttempt} saveEnabled={false} onEvidenceChange={() => undefined} onComplete={() => undefined} onClearSavedProgress={clear} clearTriggerRef={triggerRef} />);
+    const trigger = screen.getByRole("button", { name: "저장된 진행 지우기" });
+    expect(trigger).toHaveAttribute("aria-disabled", "true");
+    await user.click(trigger);
+    expect(clear).not.toHaveBeenCalled();
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
   });
 
   it("shows the report flow, privacy-safe teacher summary, and print action", async () => {
