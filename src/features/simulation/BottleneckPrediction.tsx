@@ -16,11 +16,12 @@ const choices: readonly { label: string; reason: WaitReason }[] = [
 ];
 
 const reasonLabel = (reason: WaitReason): string => choices.find((choice) => choice.reason === reason)?.label ?? "기다림";
+const koreanSyllableCount = (value: string): number => [...value].filter((character) => /[가-힣]/.test(character)).length;
 
 export function BottleneckPrediction({ onSubmit, submittedReason = null, submittedExplanation = "", engineReason = null }: BottleneckPredictionProps) {
   const [reason, setReason] = useState<WaitReason | null>(submittedReason);
   const [explanation, setExplanation] = useState("");
-  const canSubmit = reason !== null && explanation.trim().length >= 10 && /[가-힣]/.test(explanation);
+  const canSubmit = reason !== null && koreanSyllableCount(explanation) >= 10;
   if (submittedReason) {
     const correct = engineReason !== null && submittedReason === engineReason;
     return <section className="prediction-feedback" aria-label="예측 결과">

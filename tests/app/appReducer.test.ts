@@ -103,6 +103,15 @@ describe("learning-state reducer", () => {
     expect(canEnterStage({ ...attempt, draftSchedule: { entries: entries.map((entry) => entry.taskId === "verify-content" ? { ...entry, plannedStart: Number.MAX_SAFE_INTEGER + 1 } : entry), learnerEdges: edges } }, "simulation")).toBe(false);
   });
 
+  it("allows a completed zero-wait snapshot into analysis without a prediction", () => {
+    const base = createInitialState();
+    const current = base.attempts["science-display"]!;
+    const noWait = snapshot({ result: { runs: [], waits: [], finishTime: 0, omittedTaskIds: [], blockedTaskIds: [], issues: [] } });
+    const attempt = { ...current, stage: "simulation" as const, initialSnapshot: noWait, prediction: null };
+    expect(canEnterStage({ ...attempt, stage: "simulation" }, "analysis")).toBe(true);
+    expect(canEnterStage({ ...attempt, stage: "simulation", initialSnapshot: snapshot({ result: { runs: [], waits: [{ taskId: "task", from: 0, to: 1, reason: "dependency" }], finishTime: 1, omittedTaskIds: [], blockedTaskIds: [], issues: [] } }) }, "analysis")).toBe(false);
+  });
+
   it("does not mutate an earlier attempt or its snapshot", () => {
     const state = withAttempt((attempt) => ({ ...attempt, stage: "simulation" }));
     const next = appReducer(state, { type: "SAVE_INITIAL_SNAPSHOT", snapshot: snapshot({ draft: { entries: [], learnerEdges: [] } }) });

@@ -68,6 +68,7 @@ function AppShell() {
           />
         ) : attempt.stage === "simulation" && attempt.initialSnapshot ? (
           <SimulationScreen
+            key={`${scenario.id}:${attempt.initialSnapshot.result.finishTime}:${attempt.initialSnapshot.result.runs.length}`}
             scenario={scenario}
             snapshot={attempt.initialSnapshot}
             prediction={attempt.prediction}
