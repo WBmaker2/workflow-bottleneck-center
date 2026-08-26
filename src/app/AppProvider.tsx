@@ -30,12 +30,18 @@ export function AppProvider({ children, repository: suppliedRepository }: AppPro
   });
   const previousSaveEnabled = useRef(state.saveEnabled);
   const saveErrorAnnounced = useRef(false);
+  const clearErrorAnnounced = useRef(false);
 
   useEffect(() => {
     if (previousSaveEnabled.current && !state.saveEnabled) {
-      repository.clear();
+      const result = repository.clear();
+      if (!result.ok && !clearErrorAnnounced.current) {
+        clearErrorAnnounced.current = true;
+        dispatch({ type: "ANNOUNCE", message: "이 기기의 저장 내용을 지우지 못했지만 현재 활동은 계속할 수 있습니다." });
+      }
       saveErrorAnnounced.current = false;
     } else if (state.saveEnabled) {
+      clearErrorAnnounced.current = false;
       const result = repository.persist(state);
       if (!result.ok && !saveErrorAnnounced.current) {
         saveErrorAnnounced.current = true;

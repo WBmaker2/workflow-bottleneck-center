@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { appReducer, createInitialState } from "../../src/app/appReducer";
 import { canEnterStage, getRequiredAction } from "../../src/app/appSelectors";
+import { getScenario } from "../../src/data/scenarios";
+import { requiredEdgesFromScenario } from "../../src/domain/scenarioValidation";
 import type { AttemptSnapshot, MissionAttempt } from "../../src/app/appTypes";
 import type { ScheduleDraft } from "../../src/domain/types";
 
@@ -85,12 +87,74 @@ describe("learning-state reducer", () => {
     expect(getRequiredAction({ ...base, stage: "report" })).toBe(null);
   });
 
+  it("allows simulation only for a complete draft accepted by the domain simulator", () => {
+    const scenario = getScenario("science-display");
+    const edges = requiredEdgesFromScenario(scenario);
+    const entries = scenario.tasks.map((task) => ({ taskId: task.id, plannedStart: 0, roleIds: scenario.roles.slice(0, task.peopleRequired).map(({ id }) => id) }));
+    const attempt = {
+      ...createInitialState().attempts["science-display"]!,
+      stage: "schedule" as const,
+      conditionsAcknowledged: true,
+      relationEdges: edges,
+      draftSchedule: { entries, learnerEdges: edges },
+    };
+    expect(canEnterStage(attempt, "simulation")).toBe(true);
+    expect(canEnterStage({ ...attempt, draftSchedule: { entries: entries.slice(1), learnerEdges: edges } }, "simulation")).toBe(false);
+    expect(canEnterStage({ ...attempt, draftSchedule: { entries: entries.map((entry) => entry.taskId === "verify-content" ? { ...entry, plannedStart: Number.MAX_SAFE_INTEGER + 1 } : entry), learnerEdges: edges } }, "simulation")).toBe(false);
+  });
+
   it("does not mutate an earlier attempt or its snapshot", () => {
-    const initialSnapshot = snapshot();
-    const state = withAttempt((attempt) => ({ ...attempt, stage: "simulation", initialSnapshot }));
+    const state = withAttempt((attempt) => ({ ...attempt, stage: "simulation" }));
     const next = appReducer(state, { type: "SAVE_INITIAL_SNAPSHOT", snapshot: snapshot({ draft: { entries: [], learnerEdges: [] } }) });
-    expect(state.attempts["science-display"]!.initialSnapshot).toBe(initialSnapshot);
+    expect(state.attempts["science-display"]!.initialSnapshot).toBeNull();
     expect(next.attempts).not.toBe(state.attempts);
     expect(next.attempts["science-display"]).not.toBe(state.attempts["science-display"]);
+  });
+
+  it("keeps the first initial snapshot as the immutable baseline", () => {
+    const first = snapshot({ result: { runs: [], waits: [], finishTime: 1, omittedTaskIds: [], blockedTaskIds: [], issues: [] } });
+    const second = snapshot({ result: { runs: [], waits: [], finishTime: 99, omittedTaskIds: [], blockedTaskIds: [], issues: [] } });
+    const state = withAttempt((attempt) => ({ ...attempt, stage: "simulation" }));
+    const saved = appReducer(state, { type: "SAVE_INITIAL_SNAPSHOT", snapshot: first });
+    const ignored = appReducer(saved, { type: "SAVE_INITIAL_SNAPSHOT", snapshot: second });
+    expect(ignored.attempts["science-display"]!.initialSnapshot).toBe(saved.attempts["science-display"]!.initialSnapshot);
+    expect(ignored.attempts["science-display"]!.initialSnapshot!.result.finishTime).toBe(1);
+  });
+
+  it("deep-copies and freezes snapshot input at the reducer boundary", () => {
+    const raw = snapshot({ result: { runs: [], waits: [], finishTime: 1, omittedTaskIds: [], blockedTaskIds: [], issues: [{ code: "x", message: "외부" }] } });
+    const state = withAttempt((attempt) => ({ ...attempt, stage: "simulation" }));
+    const next = appReducer(state, { type: "SAVE_INITIAL_SNAPSHOT", snapshot: raw });
+    (raw.result.issues as { code: string; message: string }[]).push({ code: "mutated", message: "변경" });
+    const stored = next.attempts["science-display"]!.initialSnapshot!;
+    expect(stored.result.issues).toHaveLength(1);
+    expect(Object.isFrozen(stored)).toBe(true);
+    expect(Object.isFrozen(stored.result.issues)).toBe(true);
+  });
+
+  it("invalidates completion evidence when revision or report inputs change", () => {
+    const base = createInitialState().attempts["science-display"]!;
+    const revised = { entries: [], learnerEdges: [] };
+    const completedAttempt = {
+      ...base,
+      stage: "report" as const,
+      revisedSchedule: revised,
+      selectedFindingId: "bottleneck-1",
+      revisedSnapshot: snapshot(),
+      comparison: { finishDelta: 0, waitDelta: 0, changedTaskIds: [], preserved: { safety: true, quality: true, fairness: true }, summary: "완료" },
+      evidence: { dependencyExplanation: "a", parallelExplanation: "b", bottleneckExplanation: "c", tradeoffExplanation: "d" },
+      completed: true,
+    };
+    const reportState = { ...createInitialState(), attempts: { ...createInitialState().attempts, "science-display": completedAttempt } };
+    const evidenceChanged = appReducer(reportState, { type: "SET_EVIDENCE_FIELD", field: "tradeoffExplanation", value: "수정" });
+    expect(evidenceChanged.attempts["science-display"]!.completed).toBe(false);
+
+    const revisionState = { ...reportState, attempts: { ...reportState.attempts, "science-display": { ...completedAttempt, stage: "revision" as const } } };
+    const scheduleChanged = appReducer(revisionState, { type: "SET_REVISED_SCHEDULE", draft: revised });
+    expect(scheduleChanged.attempts["science-display"]!.completed).toBe(false);
+    expect(scheduleChanged.attempts["science-display"]!.revisedSnapshot).toBeNull();
+    expect(scheduleChanged.attempts["science-display"]!.comparison).toBeNull();
+    const snapshotSaved = appReducer(revisionState, { type: "SAVE_REVISED_SNAPSHOT", snapshot: snapshot(), comparison: completedAttempt.comparison });
+    expect(snapshotSaved.attempts["science-display"]!.completed).toBe(false);
   });
 });

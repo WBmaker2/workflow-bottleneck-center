@@ -2,7 +2,7 @@
 
 ## 결과
 
-- 구현 커밋: `de0e2b0` (`feat: manage private local learning progress`)
+- 최초 구현 커밋: `9cf046b` (`feat: manage private local learning progress`)
 - 범위: Task 6에서 지정한 app/state와 storage 경계, 해당 focused tests만 변경했습니다.
 - 네트워크, 로그인, 브라우저 UI 스타일은 추가하지 않았습니다.
 
@@ -68,3 +68,50 @@ npm run build
 - 저장 payload의 `relationEdges`를 rehydrate 시 draft의 learner edge로 정규화하여 두 입력의 불일치가 실행 경로에 남지 않도록 했습니다.
 - 파생 결과는 저장하지 않으므로 시나리오 규칙이 변경되면 복원 결과가 현재 도메인 규칙 기준으로 달라질 수 있습니다. 이는 stale metric을 신뢰하지 않기 위한 의도된 동작입니다.
 - `tsconfig.app.tsbuildinfo`, `tsconfig.node.tsbuildinfo`는 검증 명령이 생성한 untracked 산출물이며 커밋하지 않았습니다.
+
+## Fix round 1/5
+
+### RED
+
+추가한 회귀 테스트를 먼저 실행했습니다.
+
+```bash
+npm run test -- tests/app/appReducer.test.ts tests/storage/progressRepository.test.ts
+# 4 failed: 최초 snapshot 덮어쓰기, 완료 상태 stale 유지,
+# hydration schedule stage 후퇴, semantic corruption 미거부
+```
+
+### GREEN
+
+- 최초 `SAVE_INITIAL_SNAPSHOT`만 허용하고 중첩 snapshot을 복사·동결했습니다. 초기 기준 일정은 snapshot 이후 편집을 거부합니다.
+- revised schedule/snapshot/evidence 변경 시 완료 상태와 stale 파생 결과를 무효화합니다.
+- simulation 진입은 완전한 draft와 relation 계약 및 simulator 결과를 확인합니다.
+- hydration은 저장 stage와 유효 prerequisite의 최솟값으로 복원하며 모순 stage와 존재하지 않는 bottleneck finding을 decoder에서 거부합니다.
+- clear 실패는 한국어 비치명 공지로 1회 알리고 enable→disable 전이마다 clear를 한 번만 호출합니다.
+
+Fix-round 검증:
+
+```bash
+npm run test -- tests/app/appReducer.test.ts tests/storage/progressRepository.test.ts
+# Test Files 2 passed, Tests 20 passed
+
+npm run test -- tests/app tests/storage tests/domain
+# Test Files 8 passed, Tests 51 passed
+
+npm run typecheck
+# passed
+
+npm run lint
+# passed with --max-warnings=0
+
+npm run check:file-length
+# Checked 36 source files (max 499 lines)
+
+npm run build
+# vite build passed
+
+git status --short
+# source changes staged for the fix commit; tsbuildinfo 생성물 없음
+```
+
+Fix commit SHA: `44dcb0b` (`fix: harden learning progress boundaries`)

@@ -1,5 +1,6 @@
 import { getScenario } from "../data/scenarios";
 import { validateRelationMap } from "../domain/relationValidator";
+import { simulateSchedule } from "../domain/simulator";
 import type { LearningStage, MissionAttempt } from "./appTypes";
 
 const stages: readonly LearningStage[] = ["briefing", "relations", "schedule", "simulation", "analysis", "revision", "report"];
@@ -12,6 +13,21 @@ const relationReady = (attempt: MissionAttempt): boolean => {
     && validation.duplicate.length === 0;
 };
 
+export const isScheduleReady = (scenario: ReturnType<typeof getScenario>, draft: MissionAttempt["draftSchedule"]): boolean => {
+  if (!Array.isArray(draft.entries) || !Array.isArray(draft.learnerEdges)) return false;
+  const taskIds = new Set(scenario.tasks.map(({ id }) => id));
+  const roleIds: ReadonlySet<string> = new Set(scenario.roles.map(({ id }) => id));
+  if (draft.entries.length !== taskIds.size || new Set(draft.entries.map(({ taskId }) => taskId)).size !== taskIds.size) return false;
+  if (draft.entries.some(({ taskId, plannedStart, roleIds: assigned }) => {
+    const task = scenario.tasks.find(({ id }) => id === taskId);
+    return !task || !Number.isSafeInteger(plannedStart) || plannedStart < 0 || assigned.length !== task.peopleRequired || new Set(assigned).size !== assigned.length || assigned.some((roleId: unknown) => typeof roleId !== "string" || !roleIds.has(roleId));
+  })) return false;
+  const relation = validateRelationMap(scenario, draft.learnerEdges);
+  if (relation.missingRequired.length > 0 || relation.cycleTaskIds.length > 0 || relation.unknown.length > 0 || relation.duplicate.length > 0) return false;
+  const result = simulateSchedule(scenario, draft);
+  return result.omittedTaskIds.length === 0 && result.blockedTaskIds.length === 0 && result.issues.length === 0;
+};
+
 export function canEnterStage(attempt: MissionAttempt, stage: LearningStage): boolean {
   const target = stages.indexOf(stage);
   const current = stages.indexOf(attempt.stage);
@@ -22,7 +38,7 @@ export function canEnterStage(attempt: MissionAttempt, stage: LearningStage): bo
     case "briefing": return true;
     case "relations": return attempt.conditionsAcknowledged;
     case "schedule": return relationReady(attempt);
-    case "simulation": return true;
+    case "simulation": return isScheduleReady(getScenario(attempt.scenarioId), attempt.draftSchedule);
     case "analysis": return attempt.initialSnapshot !== null && attempt.prediction !== null;
     case "revision": return attempt.selectedFindingId !== null;
     case "report": return attempt.revisedSnapshot !== null && attempt.comparison !== null;

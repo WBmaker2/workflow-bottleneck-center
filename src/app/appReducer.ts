@@ -84,36 +84,39 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return withAttempt(state, Object.freeze({ ...attempt, conditionsAcknowledged: true }));
     case "SET_RELATIONS":
       if (attempt.stage !== "relations") return invalid(state, "관계 설계 단계에서 관계를 연결하세요.");
+      if (attempt.initialSnapshot) return invalid(state, "최초 실행 결과가 저장되어 관계를 수정할 수 없습니다.");
       {
         const edges = cloneFreeze(action.edges);
-        return withAttempt(state, Object.freeze({ ...attempt, relationEdges: edges, draftSchedule: updateDraft(attempt.draftSchedule, { learnerEdges: edges }) }));
+        return withAttempt(state, Object.freeze({ ...attempt, relationEdges: edges, draftSchedule: updateDraft(attempt.draftSchedule, { learnerEdges: edges }), completed: false }));
       }
     case "SET_DRAFT_SCHEDULE":
       if (attempt.stage !== "schedule" && attempt.stage !== "revision") return invalid(state, "일정표 단계에서 작업을 배치하세요.");
-      if (attempt.stage === "revision") return withAttempt(state, Object.freeze({ ...attempt, revisedSchedule: freezeDraft(action.draft) }));
-      return withAttempt(state, Object.freeze({ ...attempt, draftSchedule: freezeDraft(action.draft) }));
+      if (attempt.stage === "revision") return withAttempt(state, Object.freeze({ ...attempt, revisedSchedule: freezeDraft(action.draft), revisedSnapshot: null, comparison: null, completed: false }));
+      if (attempt.initialSnapshot) return invalid(state, "최초 실행 결과가 저장되어 일정을 수정할 수 없습니다.");
+      return withAttempt(state, Object.freeze({ ...attempt, draftSchedule: freezeDraft(action.draft), completed: false }));
     case "SAVE_INITIAL_SNAPSHOT":
       if (attempt.stage !== "simulation") return invalid(state, "먼저 가상 실행 단계로 이동하세요.");
-      return withAttempt(state, Object.freeze({ ...attempt, initialSnapshot: freezeSnapshot(action.snapshot) }));
+      if (attempt.initialSnapshot) return state;
+      return withAttempt(state, Object.freeze({ ...attempt, initialSnapshot: freezeSnapshot(action.snapshot), completed: false }));
     case "SET_PREDICTION":
       if (attempt.stage !== "simulation") return invalid(state, "실행 중에 기다림 원인을 예측하세요.");
-      return withAttempt(state, Object.freeze({ ...attempt, prediction: action.reason, predictionExplanation: action.explanation }));
+      return withAttempt(state, Object.freeze({ ...attempt, prediction: action.reason, predictionExplanation: action.explanation, completed: false }));
     case "SELECT_BOTTLENECK":
       if (attempt.stage !== "analysis" || !(attempt.initialSnapshot?.bottlenecks.findings ?? []).some(({ id }) => id === action.findingId)) return invalid(state, "먼저 분석 결과에 표시된 병목 원인을 선택하세요.");
-      return withAttempt(state, Object.freeze({ ...attempt, selectedFindingId: action.findingId }));
+      return withAttempt(state, Object.freeze({ ...attempt, selectedFindingId: action.findingId, completed: false }));
     case "BEGIN_REVISION":
       if (attempt.stage !== "analysis" || !attempt.selectedFindingId) return invalid(state, "먼저 병목 원인을 선택하세요.");
-      return withAttempt(state, Object.freeze({ ...attempt, stage: "revision", revisedSchedule: freezeDraft(attempt.draftSchedule), revisedSnapshot: null, comparison: null }));
+      return withAttempt(state, Object.freeze({ ...attempt, stage: "revision", revisedSchedule: freezeDraft(attempt.draftSchedule), revisedSnapshot: null, comparison: null, completed: false }));
     case "SET_REVISED_SCHEDULE":
       if (attempt.stage !== "revision") return invalid(state, "수정 단계에서 새 일정을 배치하세요.");
-      return withAttempt(state, Object.freeze({ ...attempt, revisedSchedule: freezeDraft(action.draft) }));
+      return withAttempt(state, Object.freeze({ ...attempt, revisedSchedule: freezeDraft(action.draft), revisedSnapshot: null, comparison: null, completed: false }));
     case "SAVE_REVISED_SNAPSHOT":
       if (attempt.stage !== "revision" || !attempt.revisedSchedule || !attempt.selectedFindingId) return invalid(state, "먼저 수정 일정을 준비하세요.");
-      return withAttempt(state, Object.freeze({ ...attempt, revisedSnapshot: freezeSnapshot(action.snapshot), comparison: cloneFreeze(action.comparison) }));
+      return withAttempt(state, Object.freeze({ ...attempt, revisedSnapshot: freezeSnapshot(action.snapshot), comparison: cloneFreeze(action.comparison), completed: false }));
     case "SET_EVIDENCE_FIELD":
       if (attempt.stage !== "report") return invalid(state, "보고서 단계에서 근거를 작성하세요.");
       if (!(action.field in emptyEvidence)) return invalid(state, "알 수 없는 근거 항목입니다.");
-      return withAttempt(state, Object.freeze({ ...attempt, evidence: Object.freeze({ ...attempt.evidence, [action.field]: action.value }) }));
+      return withAttempt(state, Object.freeze({ ...attempt, evidence: Object.freeze({ ...attempt.evidence, [action.field]: action.value }), completed: false }));
     case "COMPLETE_MISSION": {
       const evidenceReady = Object.values(attempt.evidence).every((value) => value.trim().length > 0);
       const evaluation = attempt.revisedSnapshot?.evaluation;
