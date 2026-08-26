@@ -54,4 +54,45 @@ describe("schedule evaluation", () => {
     expect(evaluation.metrics.safetyMet).toBe(false);
     expect(evaluation.metrics.timeGoalMet).toBe(true);
   });
+
+  const completeResult = (assignments: Record<string, ("A" | "B" | "C")[]>, finishTime = scienceDisplay.timeGoal): SimulationResult => ({
+    runs: scienceDisplay.tasks.map((task, index) => ({
+      taskId: task.id,
+      plannedStart: 0,
+      actualStart: index,
+      end: index + task.duration,
+      roleIds: assignments[task.id] ?? ["A"],
+    })),
+    waits: [], finishTime, omittedTaskIds: [], blockedTaskIds: [], issues: [],
+  });
+
+  it("revises when participating roles are one below the minimum", () => {
+    const result = completeResult(Object.fromEntries(scienceDisplay.tasks.map((task) => [task.id, task.peopleRequired === 2 ? ["A", "B"] : ["A"]])));
+    const scenario = { ...scienceDisplay, fairness: { minParticipatingRoles: 3 as const, maxLoadGap: 99 } };
+    const evaluation = evaluateSchedule(scenario, result);
+    expect(evaluation.status).toBe("revise");
+    expect(evaluation.metrics.fairnessMet).toBe(false);
+  });
+
+  it("revises when role load gap is exactly maxLoadGap plus one", () => {
+    const result = completeResult({
+      "verify-content": ["A"], "prepare-print-file": ["A"], "print-text": ["A"],
+      "prepare-illustrations": ["C"], "attach-materials": ["A", "B"], "final-review": ["A", "B"],
+    });
+    const scenario = { ...scienceDisplay, fairness: { ...scienceDisplay.fairness, maxLoadGap: 6 } };
+    const evaluation = evaluateSchedule(scenario, result);
+    expect(Math.max(...Object.values(evaluation.metrics.roleLoadUnits)) - Math.min(...Object.values(evaluation.metrics.roleLoadUnits))).toBe(scenario.fairness.maxLoadGap + 1);
+    expect(evaluation.status).toBe("revise");
+    expect(evaluation.metrics.fairnessMet).toBe(false);
+  });
+
+  it("revises when completion is exactly timeGoal plus one", () => {
+    const result = completeResult({
+      "verify-content": ["A"], "prepare-print-file": ["B"], "print-text": ["A"],
+      "prepare-illustrations": ["C"], "attach-materials": ["A", "B"], "final-review": ["B", "C"],
+    }, scienceDisplay.timeGoal + 1);
+    const evaluation = evaluateSchedule(scienceDisplay, result);
+    expect(evaluation.status).toBe("revise");
+    expect(evaluation.metrics.timeGoalMet).toBe(false);
+  });
 });

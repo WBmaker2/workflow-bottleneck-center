@@ -106,37 +106,18 @@ export function analyzeBottlenecks(
   if (!latest) return { criticalTaskIds: [], findings: [], totalWaitUnits: 0 };
 
   const criticalReverse: string[] = [];
+  const causalWaitsByTask = new Map<string, readonly WaitInterval[]>();
   const seen = new Set<string>();
   let current: TaskRun | undefined = latest;
   while (current && !seen.has(current.taskId)) {
     seen.add(current.taskId);
     criticalReverse.push(current.taskId);
     const waits = result.waits
-      .filter((wait) => wait.taskId === current!.taskId && waitDuration(wait) > 0)
+      .filter((wait) => wait.taskId === current!.taskId && wait.to === current!.actualStart && waitDuration(wait) > 0)
       .sort((left, right) => waitPriority(left) - waitPriority(right) || left.from - right.from);
-    // A resource wait can be caused by a side branch while the task's
-    // dependency path still determines the finishing chain. Prefer that
-    // published dependency ancestry, then use a real resource/role/solo
-    // blocker when no dependency predecessor is available.
-    const dependencyWait = waits.find((wait) => {
-      if (wait.reason !== "dependency" || !wait.blockerTaskId) return false;
-      const blocker = runsById.get(wait.blockerTaskId);
-      return blocker !== undefined && blocker.end <= current!.actualStart;
-    });
-    if (dependencyWait?.blockerTaskId) {
-      current = runsById.get(dependencyWait.blockerTaskId);
-      continue;
-    }
-    const fallbackRuns = scenario.tasks
-      .filter((task) => task.unlocks.includes(current!.taskId))
-      .map((task) => runsById.get(task.id))
-      .filter((run): run is TaskRun => run !== undefined && run.end <= current!.actualStart)
-      .sort((left, right) => right.end - left.end || compare(left.taskId, right.taskId));
-    if (fallbackRuns[0]) {
-      current = fallbackRuns[0];
-      continue;
-    }
-    const nextWait = waits.find((wait) => blockerForWait(wait, current!.actualStart, runsById, runs, scenario));
+    const causal = waits.filter((wait) => blockerForWait(wait, current!.actualStart, runsById, runs, scenario));
+    causalWaitsByTask.set(current.taskId, Object.freeze(causal));
+    const nextWait = causal[0];
     current = nextWait ? blockerForWait(nextWait, current.actualStart, runsById, runs, scenario) : undefined;
   }
   const criticalTaskIds = criticalReverse.reverse();
@@ -144,7 +125,7 @@ export function analyzeBottlenecks(
   const findings: BottleneckFinding[] = [];
   const grouped = new Map<string, { wait: WaitInterval; delayUnits: number }>();
   for (const taskId of criticalTaskIds) {
-    for (const wait of result.waits.filter((item) => item.taskId === taskId && waitDuration(item) > 0)) {
+    for (const wait of causalWaitsByTask.get(taskId) ?? []) {
       const key = causeKey(wait);
       const previous = grouped.get(key);
       if (previous) previous.delayUnits += waitDuration(wait);

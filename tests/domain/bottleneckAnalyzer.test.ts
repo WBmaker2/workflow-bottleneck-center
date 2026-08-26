@@ -1,42 +1,40 @@
 import { describe, expect, it } from "vitest";
+import { makeScenario } from "../../src/test/fixtures";
 import { analyzeBottlenecks } from "../../src/domain/bottleneckAnalyzer";
-import type { ScenarioDefinition, TaskRun, WaitInterval } from "../../src/domain/types";
+import { simulateSchedule } from "../../src/domain/simulator";
+import type { ScenarioDefinition } from "../../src/domain/types";
 
-const scenario: ScenarioDefinition = {
-  id: "science-display",
-  title: "병목 시험",
-  mission: "가상 흐름을 살핍니다.",
-  timeGoal: 20,
-  roles: [{ id: "A", label: "역할 A" }, { id: "B", label: "역할 B" }, { id: "C", label: "역할 C" }],
-  resources: [{ id: "printer", label: "프린터", capacity: 1 }],
-  fairness: { minParticipatingRoles: 2, maxLoadGap: 10 },
-  tasks: [
-    { id: "prepare", title: "준비", duration: 2, prerequisites: [], peopleRequired: 1, resources: [], parallel: "allowed", conditions: [], evidenceKinds: [], unlocks: ["shared-a"] },
-    { id: "long-independent", title: "긴 독립 작업", duration: 6, prerequisites: [], peopleRequired: 1, resources: [], parallel: "allowed", conditions: [], evidenceKinds: [], unlocks: [] },
-    { id: "resource-holder", title: "자원 점유 작업", duration: 2, prerequisites: [], peopleRequired: 1, resources: [{ resourceId: "printer", quantity: 1 }], parallel: "allowed", conditions: [], evidenceKinds: [], unlocks: [] },
-    { id: "shared-a", title: "공유 작업", duration: 3, prerequisites: [{ taskId: "prepare", kind: "workflow", reason: "준비 뒤 진행" }], peopleRequired: 1, resources: [{ resourceId: "printer", quantity: 1 }], parallel: "allowed", conditions: [], evidenceKinds: [], unlocks: ["finish"] },
-    { id: "finish", title: "마무리", duration: 3, prerequisites: [{ taskId: "shared-a", kind: "workflow", reason: "공유 작업 뒤 진행" }], peopleRequired: 1, resources: [], parallel: "allowed", conditions: [], evidenceKinds: [], unlocks: [] },
-  ],
-  disclaimer: "모든 시간은 교육용 가상 단위이며 실제 작업 수행 시간을 예측하지 않습니다.",
-  teacherFocus: "실제 blocker를 찾습니다.",
-};
+const task = (id: string, overrides: Partial<ScenarioDefinition["tasks"][number]> = {}) => ({
+  id, title: id, duration: 2, prerequisites: [], peopleRequired: 1 as const, resources: [], parallel: "allowed" as const,
+  conditions: [], evidenceKinds: [], unlocks: [], ...overrides,
+});
 
 describe("bottleneck analysis", () => {
-  it("traces the finishing chain and does not call a long independent task a bottleneck", () => {
-    const runs: readonly TaskRun[] = [
-      { taskId: "prepare", plannedStart: 0, actualStart: 0, end: 2, roleIds: ["A"] },
-      { taskId: "resource-holder", plannedStart: 0, actualStart: 0, end: 2, roleIds: ["B"] },
-      { taskId: "long-independent", plannedStart: 0, actualStart: 0, end: 6, roleIds: ["C"] },
-      { taskId: "shared-a", plannedStart: 0, actualStart: 4, end: 7, roleIds: ["A"] },
-      { taskId: "finish", plannedStart: 0, actualStart: 7, end: 10, roleIds: ["B"] },
-    ];
-    const waits: readonly WaitInterval[] = [
-      { taskId: "shared-a", from: 2, to: 4, reason: "resource", resourceId: "printer", blockerTaskId: "resource-holder" },
-      { taskId: "finish", from: 0, to: 7, reason: "dependency", blockerTaskId: "shared-a" },
-    ];
-    const analysis = analyzeBottlenecks(scenario, { runs, waits, finishTime: 10, omittedTaskIds: [], blockedTaskIds: [], issues: [] });
-    expect(analysis.criticalTaskIds).toEqual(["prepare", "shared-a", "finish"]);
+  it("traces the actual resource blocker and emits only waits that end at actualStart", () => {
+    const simulatorScenario = makeScenario({
+      tasks: [
+        task("resource-holder", { duration: 4, resources: [{ resourceId: "printer", quantity: 1 }], unlocks: [] }),
+        task("prepare", { duration: 2, unlocks: ["shared-a"] }),
+        task("long-independent", { duration: 6 }),
+        task("shared-a", { duration: 3, prerequisites: [{ taskId: "prepare", kind: "workflow", reason: "준비 뒤 진행" }], resources: [{ resourceId: "printer", quantity: 1 }], unlocks: ["finish"] }),
+        task("finish", { duration: 3, prerequisites: [{ taskId: "shared-a", kind: "workflow", reason: "공유 작업 뒤 진행" }] }),
+      ],
+      resources: [{ id: "printer", label: "프린터", capacity: 1 }],
+    });
+    const result = simulateSchedule(simulatorScenario, {
+      learnerEdges: [],
+      entries: [
+        { taskId: "resource-holder", plannedStart: 0, roleIds: ["A"] },
+        { taskId: "prepare", plannedStart: 0, roleIds: ["B"] },
+        { taskId: "long-independent", plannedStart: 0, roleIds: ["C"] },
+        { taskId: "shared-a", plannedStart: 0, roleIds: ["A"] },
+        { taskId: "finish", plannedStart: 0, roleIds: ["B"] },
+      ],
+    });
+    const analysis = analyzeBottlenecks(simulatorScenario, result);
+    expect(analysis.criticalTaskIds).toEqual(["resource-holder", "shared-a", "finish"]);
     expect(analysis.findings.some(({ blockedTaskId }) => blockedTaskId === "long-independent")).toBe(false);
     expect(analysis.findings).toContainEqual(expect.objectContaining({ type: "resource-wait", blockedTaskId: "shared-a", delayUnits: 2 }));
+    expect(analysis.findings.some(({ type, blockedTaskId }) => type === "dependency-path" && blockedTaskId === "shared-a")).toBe(false);
   });
 });
