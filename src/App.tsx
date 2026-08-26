@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { AppProvider, useAppDispatch, useAppState } from "./app/AppProvider";
 import { getScenario, scenarioCatalog } from "./data/scenarios";
 import { BriefingScreen } from "./features/briefing/BriefingScreen";
@@ -8,6 +9,8 @@ import { ScheduleScreen } from "./features/schedule/ScheduleScreen";
 import { SimulationScreen } from "./features/simulation/SimulationScreen";
 import { AnalysisScreen } from "./features/analysis/AnalysisScreen";
 import { RevisionScreen } from "./features/revision/RevisionScreen";
+import { ReportScreen } from "./features/report/ReportScreen";
+import { ModalDialog } from "./components/ModalDialog";
 
 const stageLabels = {
   briefing: "안내",
@@ -24,6 +27,8 @@ function AppShell() {
   const dispatch = useAppDispatch();
   const scenario = getScenario(state.selectedScenarioId);
   const attempt = state.attempts[state.selectedScenarioId]!;
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const clearTriggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <main aria-labelledby="app-title">
@@ -40,10 +45,11 @@ function AppShell() {
           ))}
         </ul>
       </nav>
-      <label className="save-toggle">
+      <label className="save-toggle" aria-describedby="save-toggle-description">
         <input type="checkbox" checked={state.saveEnabled} onChange={(event) => dispatch({ type: "SET_SAVE_ENABLED", enabled: event.target.checked })} />
-        이 기기에 활동 저장
+        이 기기에 진행 저장
       </label>
+      <p id="save-toggle-description">선택하면 이 브라우저에 역할 A·B·C의 활동만 저장합니다. 학생 이름이나 온라인 계정은 사용하지 않습니다.</p>
       <LiveStatus message={state.announcement} blocked={state.announcement.includes("안전") || state.announcement.includes("품질")} />
       <section className="stage-shell" aria-labelledby="scenario-title">
         <h2 id="scenario-title">{scenario.title}</h2>
@@ -99,6 +105,15 @@ function AppShell() {
             onCompare={(snapshot, comparison) => dispatch({ type: "SAVE_REVISED_SNAPSHOT", snapshot, comparison })}
             onReport={() => dispatch({ type: "ENTER_STAGE", stage: "report" })}
           />
+        ) : attempt.stage === "report" ? (
+          <ReportScreen
+            scenario={scenario}
+            attempt={attempt}
+            saveEnabled={state.saveEnabled}
+            onEvidenceChange={(field, value) => dispatch({ type: "SET_EVIDENCE_FIELD", field, value })}
+            onComplete={() => dispatch({ type: "COMPLETE_MISSION" })}
+            onClearSavedProgress={() => setClearDialogOpen(true)}
+          />
         ) : (
           <section aria-labelledby="next-stage-title">
             <h3 id="next-stage-title">{stageLabels[attempt.stage]}</h3>
@@ -106,6 +121,10 @@ function AppShell() {
           </section>
         )}
       </section>
+      <ModalDialog open={clearDialogOpen} title="저장된 진행 지우기" returnFocusRef={clearTriggerRef} onClose={() => setClearDialogOpen(false)}>
+        <p>이 기기에 저장된 진행을 지울까요? 현재 화면의 활동은 계속 사용할 수 있습니다.</p>
+        <button ref={clearTriggerRef} type="button" onClick={() => { dispatch({ type: "SET_SAVE_ENABLED", enabled: false }); setClearDialogOpen(false); }}>저장된 진행 지우기 확인</button>
+      </ModalDialog>
       <UpdateHistoryButton />
     </main>
   );

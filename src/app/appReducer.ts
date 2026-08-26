@@ -4,6 +4,7 @@ import type { LearningStage, ScheduleDraft, ScenarioId } from "../domain/types";
 import { normalizeScheduleRoleIds } from "../domain/scheduleBounds";
 import { canBeginRevision, canEnterStage, isScheduleReady } from "./appSelectors";
 import type { AppAction, AppState, AttemptSnapshot, LearningEvidence, MissionAttempt } from "./appTypes";
+import { isEvidenceComplete } from "../domain/teacherSummary";
 
 const emptyEvidence: LearningEvidence = {
   dependencyExplanation: "",
@@ -136,10 +137,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return withAttempt(state, Object.freeze({ ...attempt, revisedSnapshot: freezeSnapshot(attempt.scenarioId, { ...action.snapshot, draft: canonicalDraft(attempt.scenarioId, action.snapshot.draft) }), comparison: cloneFreeze(action.comparison), completed: false }));
     case "SET_EVIDENCE_FIELD":
       if (attempt.stage !== "report") return invalid(state, "보고서 단계에서 근거를 작성하세요.");
-      if (!(action.field in emptyEvidence)) return invalid(state, "알 수 없는 근거 항목입니다.");
+      if (!Object.prototype.hasOwnProperty.call(emptyEvidence, action.field)) return invalid(state, "알 수 없는 근거 항목입니다.");
       return withAttempt(state, Object.freeze({ ...attempt, evidence: Object.freeze({ ...attempt.evidence, [action.field]: action.value }), completed: false }));
     case "COMPLETE_MISSION": {
-      const evidenceReady = Object.values(attempt.evidence).every((value) => value.trim().length > 0);
+      const evidenceReady = isEvidenceComplete(attempt.evidence);
       const evaluation = attempt.revisedSnapshot?.evaluation;
       const safe = Boolean(evaluation && evaluation.metrics.safetyMet && evaluation.metrics.qualityMet && !evaluation.violations.some(({ kind }) => kind === "safety" || kind === "quality"));
       if (attempt.stage !== "report" || !attempt.revisedSnapshot || !attempt.comparison || !evidenceReady || !safe) return invalid(state, "수정 결과의 안전·품질 조건과 네 가지 근거를 모두 확인하세요.");

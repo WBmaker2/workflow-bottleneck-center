@@ -8,8 +8,11 @@ import { AnalysisScreen } from "../../src/features/analysis/AnalysisScreen";
 import { RevisionScreen } from "../../src/features/revision/RevisionScreen";
 import { getScenario } from "../../src/data/scenarios";
 import type { AttemptSnapshot } from "../../src/app/appTypes";
+import type { MissionAttempt } from "../../src/app/appTypes";
 import type { ScheduleDraft } from "../../src/domain/types";
 import { BottleneckPanel } from "../../src/features/analysis/BottleneckPanel";
+import { EvidenceForm } from "../../src/features/report/EvidenceForm";
+import { ReportScreen } from "../../src/features/report/ReportScreen";
 
 expect.extend(axeMatchers);
 
@@ -64,6 +67,38 @@ const snapshot = (overrides: Partial<AttemptSnapshot> = {}): AttemptSnapshot => 
 });
 
 describe("analysis and revision learning flow", () => {
+  it("shows the four exact evidence prompts and rejects incomplete evidence with focus", async () => {
+    const user = userEvent.setup();
+    render(<EvidenceForm scenario={scenario} attempt={{ evidence: { dependencyExplanation: "", parallelExplanation: "", bottleneckExplanation: "", tradeoffExplanation: "" }, selectedFindingId: "bottleneck-1" }} onChange={() => undefined} />);
+    expect(screen.getByText("___ 작업이 끝나야 ___ 작업을 시작할 수 있는 이유는 ___입니다.")).toBeVisible();
+    expect(screen.getByText("___ 작업과 ___ 작업을 함께 할 수 있는 이유는 ___입니다.")).toBeVisible();
+    expect(screen.getByText("___ 때문에 ___ 작업이 ___단위 기다렸습니다.")).toBeVisible();
+    expect(screen.getByText("___을 바꾸어 시간/대기가 ___했고, 안전·품질·역할 공정성은 ___했습니다.")).toBeVisible();
+    expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByLabelText("선행 관계 설명")).toHaveAttribute("maxlength", "180");
+    await user.click(screen.getByRole("button", { name: "근거 문장 확인" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("네 가지 근거 문장을 모두 완성하세요.");
+    expect(screen.getByLabelText("선행 관계 설명")).toHaveFocus();
+  });
+
+  it("shows the report flow, privacy-safe teacher summary, and print action", async () => {
+    const user = userEvent.setup();
+    const reportAttempt = {
+      scenarioId: scenario.id, stage: "report", conditionsAcknowledged: true, relationEdges: [], draftSchedule: draft,
+      initialSnapshot: snapshot(), prediction: null, predictionExplanation: "", selectedFindingId: null, revisedSchedule: draft,
+      revisedSnapshot: snapshot(), comparison: { finishDelta: 0, waitDelta: 0, changedTaskIds: [], preserved: { safety: true, quality: true, fairness: true }, summary: "" },
+      evidence: { dependencyExplanation: "자료 확인 뒤 인쇄 글을 준비해야 품질을 지킬 수 있습니다.", parallelExplanation: "글과 그림은 도구가 달라 함께 할 수 있습니다.", bottleneckExplanation: "이번 실행에는 기록된 기다림이 없어 병목이 없습니다.", tradeoffExplanation: "확인·휴식을 유지해 안전과 품질을 지켰습니다." }, completed: false,
+    } satisfies MissionAttempt;
+    const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    render(<ReportScreen scenario={scenario} attempt={reportAttempt} onEvidenceChange={() => undefined} onComplete={() => undefined} />);
+    expect(screen.getByRole("heading", { name: "개선 보고서" })).toBeVisible();
+    expect(screen.getByText("최초 일정과 수정 일정 비교")).toBeVisible();
+    expect(screen.getAllByText("이 결과는 교육용 가상 모델이며 실제 사람의 생산성 평가에 사용할 수 없습니다.")).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "교사용 요약 인쇄" }));
+    expect(print).toHaveBeenCalledOnce();
+    print.mockRestore();
+  });
+
   it("marks a causal wait rather than the visually longest task", async () => {
     const user = userEvent.setup();
     render(<AnalysisScreen scenario={scenario} snapshot={snapshot()} prediction="resource" predictionExplanation="공유 도구를 기다렸습니다." selectedFindingId={null} onSelect={() => undefined} onBeginRevision={() => undefined} />);

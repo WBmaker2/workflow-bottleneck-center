@@ -77,7 +77,7 @@ it("shows transparent goals, human-centered guidance, and save default off", () 
   expect(screen.getByText(/도움 요청·확인·휴식은 낭비가 아닙니다/)).toBeVisible();
   expect(screen.getByText(/목표 시간 11단위/)).toBeVisible();
   expect(screen.getByText(/유일한 정답이 아닌 목표/)).toBeVisible();
-  expect(screen.getByRole("checkbox", { name: /이 기기에 활동 저장/ })).not.toBeChecked();
+  expect(screen.getByRole("checkbox", { name: "이 기기에 진행 저장" })).not.toBeChecked();
 });
 
 it("keeps the briefing shell accessible", async () => {
