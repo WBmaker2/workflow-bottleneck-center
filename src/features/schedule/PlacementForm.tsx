@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ScheduleDraft, ScheduleEntry, ScenarioDefinition } from "../../domain/types";
-import { isScheduleStart, scheduleStartUpperBound } from "../../domain/scheduleBounds";
+import { isScheduleStart, normalizeScheduleRoleIds, scheduleStartUpperBound } from "../../domain/scheduleBounds";
 
 export interface PlacementFormProps {
   scenario: ScenarioDefinition;
@@ -35,8 +35,7 @@ export function PlacementForm({ scenario, draft, selectedTaskId, onPlace }: Plac
   const place = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!task || !valid) return;
-    const roleOrder = new Map(scenario.roles.map((role, index) => [role.id, index]));
-    onPlace({ taskId: task.id, plannedStart: Number(plannedStart), roleIds: [...roleIds].sort((left, right) => (roleOrder.get(left) ?? 99) - (roleOrder.get(right) ?? 99)) });
+    onPlace({ taskId: task.id, plannedStart: Number(plannedStart), roleIds: normalizeScheduleRoleIds(scenario, roleIds) });
   };
 
   return (

@@ -1,4 +1,5 @@
 import type { ScheduleEntry, ScenarioDefinition } from "../../domain/types";
+import { normalizeScheduleRoleIds } from "../../domain/scheduleBounds";
 
 export interface TimelineStepListProps {
   scenario: ScenarioDefinition;
@@ -28,7 +29,7 @@ export function TimelineStepList({ scenario, entries }: TimelineStepListProps) {
             {group.map((entry) => {
               const task = taskLabel(scenario, entry.taskId);
               if (!task) return null;
-              const roles = entry.roleIds.map((roleId) => scenario.roles.find((role) => role.id === roleId)?.label ?? `역할 ${roleId}`).join(", ");
+              const roles = normalizeScheduleRoleIds(scenario, entry.roleIds).map((roleId) => scenario.roles.find((role) => role.id === roleId)?.label ?? `역할 ${roleId}`).join(", ");
               const resources = task.resources.length === 0
                 ? "필요한 도구 없음"
                 : task.resources.map((requirement) => scenario.resources.find((resource) => resource.id === requirement.resourceId)?.label ?? requirement.resourceId).join(", ");

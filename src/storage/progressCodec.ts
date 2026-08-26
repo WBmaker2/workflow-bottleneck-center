@@ -7,7 +7,7 @@ import type { DependencyEdge, ScheduleDraft, ScenarioDefinition, ScenarioId } fr
 import { createInitialState } from "../app/appReducer";
 import { isScheduleReady } from "../app/appSelectors";
 import { validateRelationMap } from "../domain/relationValidator";
-import { isScheduleStart } from "../domain/scheduleBounds";
+import { isScheduleStart, normalizeScheduleRoleIds } from "../domain/scheduleBounds";
 import type { AppProgressV1, AppState, LearningEvidence, MissionAttempt, PersistedMissionAttempt, AttemptSnapshot } from "../app/appTypes";
 
 const scenarioIds: ReadonlySet<string> = new Set(scenarioCatalog.map(({ id }) => id));
@@ -42,10 +42,21 @@ const readDraft = (value: unknown, scenario: ScenarioDefinition): ScheduleDraft 
   const roleIds: ReadonlySet<string> = new Set(scenario.roles.map(({ id }) => id));
   for (const item of value.entries) {
     if (!isRecord(item) || !isString(item.taskId) || !taskIds.has(item.taskId) || !isScheduleStart(scenario, item.plannedStart) || !Array.isArray(item.roleIds) || item.roleIds.some((id) => !isString(id) || !roleIds.has(id))) return null;
-    entries.push({ taskId: item.taskId, plannedStart: item.plannedStart, roleIds: item.roleIds.map(String) as ("A" | "B" | "C")[] });
+    const parsedRoleIds = item.roleIds.map(String) as ("A" | "B" | "C")[];
+    if (new Set(parsedRoleIds).size !== parsedRoleIds.length) return null;
+    entries.push({ taskId: item.taskId, plannedStart: item.plannedStart, roleIds: normalizeScheduleRoleIds(scenario, parsedRoleIds) });
   }
   return { entries, learnerEdges };
 };
+
+const canonicalDraft = (scenario: ScenarioDefinition, draft: ScheduleDraft): ScheduleDraft => ({
+  entries: draft.entries.map(({ taskId, plannedStart, roleIds }) => ({
+    taskId,
+    plannedStart,
+    roleIds: normalizeScheduleRoleIds(scenario, roleIds),
+  })),
+  learnerEdges: draft.learnerEdges.map(({ beforeTaskId, afterTaskId }) => ({ beforeTaskId, afterTaskId })),
+});
 
 const readEvidence = (value: unknown): LearningEvidence | null => {
   if (!isRecord(value)) return null;
@@ -69,8 +80,9 @@ const readAttempt = (value: unknown, scenario: ScenarioDefinition): PersistedMis
 export function encodeProgress(state: AppState): AppProgressV1 {
   const attempts = Object.fromEntries(scenarioCatalog.map(({ id }) => {
     const attempt = state.attempts[id];
-    const draft = { entries: attempt.draftSchedule.entries.map(({ taskId, plannedStart, roleIds }) => ({ taskId, plannedStart, roleIds: [...roleIds] })), learnerEdges: attempt.draftSchedule.learnerEdges.map(({ beforeTaskId, afterTaskId }) => ({ beforeTaskId, afterTaskId })) };
-    const revised = attempt.revisedSchedule === null ? null : { entries: attempt.revisedSchedule.entries.map(({ taskId, plannedStart, roleIds }) => ({ taskId, plannedStart, roleIds: [...roleIds] })), learnerEdges: attempt.revisedSchedule.learnerEdges.map(({ beforeTaskId, afterTaskId }) => ({ beforeTaskId, afterTaskId })) };
+    const scenario = scenarioCatalog.find((candidate) => candidate.id === id)!;
+    const draft = canonicalDraft(scenario, attempt.draftSchedule);
+    const revised = attempt.revisedSchedule === null ? null : canonicalDraft(scenario, attempt.revisedSchedule);
     return [id, { scenarioId: id, stage: attempt.stage, conditionsAcknowledged: attempt.conditionsAcknowledged, relationEdges: attempt.relationEdges.map(({ beforeTaskId, afterTaskId }) => ({ beforeTaskId, afterTaskId })), draftSchedule: draft, prediction: attempt.prediction, predictionExplanation: attempt.predictionExplanation, selectedFindingId: attempt.selectedFindingId, revisedSchedule: revised, evidence: { ...attempt.evidence }, completed: attempt.completed } satisfies PersistedMissionAttempt];
   }));
   return { version: 1, selectedScenarioId: state.selectedScenarioId, saveEnabled: true, attempts: attempts as unknown as AppProgressV1["attempts"] };
@@ -122,10 +134,10 @@ export function rehydrateProgress(progress: AppProgressV1): AppState {
   for (const scenario of scenarioCatalog) {
     const saved = progress.attempts[scenario.id];
     if (!saved) continue;
-    const draftSchedule = { ...saved.draftSchedule, learnerEdges: saved.relationEdges };
+    const draftSchedule = canonicalDraft(scenario, { ...saved.draftSchedule, learnerEdges: saved.relationEdges });
     const requestedStage = stageIndex(saved.stage);
     const initialSnapshot = requestedStage >= 4 ? snapshotFor(scenario, draftSchedule) : null;
-    const revisedSchedule = saved.revisedSchedule ? { ...saved.revisedSchedule, learnerEdges: saved.relationEdges } : null;
+    const revisedSchedule = saved.revisedSchedule ? canonicalDraft(scenario, { ...saved.revisedSchedule, learnerEdges: saved.relationEdges }) : null;
     const revisedSnapshot = revisedSchedule && initialSnapshot ? snapshotFor(scenario, revisedSchedule) : null;
     const comparison = revisedSchedule && initialSnapshot && revisedSnapshot ? compareAttempts(scenario, draftSchedule, initialSnapshot.evaluation, revisedSchedule, revisedSnapshot.evaluation) : null;
     const relation = validateRelationMap(scenario, saved.relationEdges);

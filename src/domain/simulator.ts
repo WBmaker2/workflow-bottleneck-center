@@ -1,6 +1,7 @@
 import { edgeKey, validateRelationMap } from "./relationValidator";
 import { requiredEdgesFromScenario } from "./scenarioValidation";
 import { mergeWaitIntervals } from "./waitIntervals";
+import { normalizeScheduleRoleIds } from "./scheduleBounds";
 import type {
   DependencyEdge,
   ScheduleDraft,
@@ -63,8 +64,8 @@ const normalizeEntries = (
     const orderDifference = (taskOrder.get(left.taskId) ?? Number.POSITIVE_INFINITY) - (taskOrder.get(right.taskId) ?? Number.POSITIVE_INFINITY);
     if (orderDifference !== 0) return orderDifference;
     if (left.plannedStart !== right.plannedStart) return left.plannedStart - right.plannedStart;
-    const leftRoles = [...left.roleIds].sort((a, b) => (roleOrder.get(a) ?? 99) - (roleOrder.get(b) ?? 99)).join(",");
-    const rightRoles = [...right.roleIds].sort((a, b) => (roleOrder.get(a) ?? 99) - (roleOrder.get(b) ?? 99)).join(",");
+    const leftRoles = normalizeScheduleRoleIds(scenario, left.roleIds).join(",");
+    const rightRoles = normalizeScheduleRoleIds(scenario, right.roleIds).join(",");
     return textCompare(leftRoles, rightRoles) || textCompare(entryKey(left), entryKey(right));
   };
 
@@ -83,7 +84,7 @@ const normalizeEntries = (
       issues.push(makeIssue("invalid-planned-start", "시작 시점은 0 이상의 정수여야 합니다.", taskId));
       valid = false;
     }
-    const roleIds = [...entry.roleIds].sort((a, b) => (roleOrder.get(a) ?? 99) - (roleOrder.get(b) ?? 99));
+    const roleIds = [...normalizeScheduleRoleIds(scenario, entry.roleIds)];
     if (roleIds.length !== task.peopleRequired) {
       issues.push(makeIssue("invalid-role-count", `이 작업에는 역할 ${task.peopleRequired}명이 필요합니다.`, taskId));
       valid = false;

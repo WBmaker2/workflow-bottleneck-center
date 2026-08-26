@@ -4,6 +4,7 @@ import { RequiredActionButton } from "../../components/RequiredActionButton";
 import { LiveStatus } from "../../components/LiveStatus";
 import { analyzeBottlenecks } from "../../domain/bottleneckAnalyzer";
 import { evaluateSchedule } from "../../domain/evaluator";
+import { normalizeScheduleRoleIds } from "../../domain/scheduleBounds";
 import { simulateSchedule } from "../../domain/simulator";
 import type { AttemptSnapshot, MissionAttempt } from "../../app/appTypes";
 import type { ScheduleDraft, ScenarioDefinition } from "../../domain/types";
@@ -29,7 +30,7 @@ const emptyDraft: ScheduleDraft = { entries: [], learnerEdges: [] };
 const snapshotFor = (scenario: ScenarioDefinition, draft: ScheduleDraft): AttemptSnapshot => {
   const result = simulateSchedule(scenario, draft);
   return {
-    draft: { entries: draft.entries.map((entry) => ({ ...entry, roleIds: [...entry.roleIds] })), learnerEdges: draft.learnerEdges.map((edge) => ({ ...edge })) },
+    draft: { entries: draft.entries.map((entry) => ({ ...entry, roleIds: normalizeScheduleRoleIds(scenario, entry.roleIds) })), learnerEdges: draft.learnerEdges.map((edge) => ({ ...edge })) },
     result,
     bottlenecks: analyzeBottlenecks(scenario, result),
     evaluation: evaluateSchedule(scenario, result),

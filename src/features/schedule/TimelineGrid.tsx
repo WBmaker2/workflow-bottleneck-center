@@ -1,6 +1,6 @@
 import type { DragEvent } from "react";
 import type { ScheduleEntry, ScenarioDefinition } from "../../domain/types";
-import { isScheduleStart, scheduleStartUpperBound } from "../../domain/scheduleBounds";
+import { isScheduleStart, normalizeScheduleRoleIds, scheduleStartUpperBound } from "../../domain/scheduleBounds";
 
 export interface TimelineGridProps {
   scenario: ScenarioDefinition;
@@ -15,7 +15,6 @@ export function TimelineGrid({ scenario, entries, onMove, onDelete }: TimelineGr
   const horizon = scheduleStartUpperBound(scenario);
   const taskById = new Map(scenario.tasks.map((task) => [task.id, task]));
   const entryById = new Map(entries.map((entry) => [entry.taskId, entry]));
-  const roleOrder = new Map(scenario.roles.map((role, index) => [role.id, index]));
   const tasksForCell = (roleId: "A" | "B" | "C", time: number) => entries.filter((entry) => {
     const task = taskById.get(entry.taskId);
     return task && entry.roleIds.includes(roleId) && entry.plannedStart === time;
@@ -67,7 +66,7 @@ export function TimelineGrid({ scenario, entries, onMove, onDelete }: TimelineGr
                   {cellEntries.map((entry) => {
                     const task = taskFor(scenario, entry.taskId);
                     if (!task) return null;
-                    const assignedRoles = [...entry.roleIds].sort((left, right) => (roleOrder.get(left) ?? 99) - (roleOrder.get(right) ?? 99));
+                    const assignedRoles = normalizeScheduleRoleIds(scenario, entry.roleIds);
                     const isPrimaryRole = assignedRoles[0] === role.id;
                     return isPrimaryRole ? (
                       <div className="task-chip" data-task-id={task.id} key={task.id}>

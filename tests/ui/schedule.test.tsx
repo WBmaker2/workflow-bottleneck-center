@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { axe } from "vitest-axe";
@@ -9,7 +9,11 @@ import { getScenario } from "../../src/data/scenarios";
 import { requiredEdgesFromScenario } from "../../src/domain/scenarioValidation";
 import { scheduleStartUpperBound } from "../../src/domain/scheduleBounds";
 import { encodeProgress, decodeProgress } from "../../src/storage/progressCodec";
+import { rehydrateProgress } from "../../src/storage/progressCodec";
+import { TimelineStepList } from "../../src/features/schedule/TimelineStepList";
+import { TimelineGrid } from "../../src/features/schedule/TimelineGrid";
 import { App } from "../../src/App";
+import type { AttemptSnapshot } from "../../src/app/appTypes";
 import type { ScheduleDraft, ScheduleEntry } from "../../src/domain/types";
 
 const renderScheduleScreen = (scenarioId: "science-display" = "science-display") => {
@@ -207,6 +211,65 @@ describe("keyboard-first schedule editor", () => {
     expect(saved.attempts[scenario.id]!.initialSnapshot).not.toBeNull();
     const mismatch = appReducer(scheduleState, { type: "SAVE_INITIAL_SNAPSHOT", snapshot: { ...snapshot, draft: { ...draft, entries: entries.slice(1) } } });
     expect(mismatch.attempts[scenario.id]!.initialSnapshot).toBeNull();
+  });
+
+  it("canonicalizes reversed roles at the reducer and snapshot boundary", () => {
+    const scenario = getScenario("science-display");
+    const edges = requiredEdgesFromScenario(scenario);
+    const entries = completeEntries().map((entry) => entry.taskId === "attach-materials" ? { ...entry, roleIds: ["B", "A"] as const } : entry);
+    const state = createInitialState();
+    const scheduleState = { ...state, attempts: { ...state.attempts, [scenario.id]: { ...state.attempts[scenario.id]!, stage: "schedule" as const, conditionsAcknowledged: true, relationEdges: edges, draftSchedule: { entries: [], learnerEdges: edges } } } };
+    const set = appReducer(scheduleState, { type: "SET_DRAFT_SCHEDULE", draft: { entries, learnerEdges: edges } });
+    expect(set.attempts[scenario.id]!.draftSchedule.entries.find((entry) => entry.taskId === "attach-materials")?.roleIds).toEqual(["A", "B"]);
+    const canonicalEntries = entries.map((entry) => entry.taskId === "attach-materials" ? { ...entry, roleIds: ["A", "B"] as const } : entry);
+    const snapshot: AttemptSnapshot = {
+      draft: { entries, learnerEdges: edges },
+      result: { runs: [], waits: [], finishTime: 0, omittedTaskIds: [], blockedTaskIds: [], issues: [] },
+      bottlenecks: { criticalTaskIds: [], findings: [], totalWaitUnits: 0 },
+      evaluation: { status: "successful", metrics: { finishTime: 0, totalWaitUnits: 0, roleLoadUnits: { A: 0, B: 0, C: 0 }, safetyMet: true, qualityMet: true, fairnessMet: true, timeGoalMet: true }, violations: [], feedback: [] },
+    };
+    const current = { ...scheduleState, attempts: { ...scheduleState.attempts, [scenario.id]: { ...scheduleState.attempts[scenario.id]!, draftSchedule: { entries: canonicalEntries, learnerEdges: edges } } } };
+    const saved = appReducer(current, { type: "SAVE_INITIAL_SNAPSHOT", snapshot });
+    expect(saved.attempts[scenario.id]!.initialSnapshot?.draft.entries.find((entry) => entry.taskId === "attach-materials")?.roleIds).toEqual(["A", "B"]);
+    const canonicalSaved = appReducer(current, { type: "SAVE_INITIAL_SNAPSHOT", snapshot: { ...snapshot, draft: { entries: canonicalEntries, learnerEdges: edges } } });
+    expect(saved.attempts[scenario.id]!.initialSnapshot).toEqual(canonicalSaved.attempts[scenario.id]!.initialSnapshot);
+  });
+
+  it("canonicalizes reversed roles through progress decode, rehydrate, and encode", () => {
+    const scenario = getScenario("science-display");
+    const state = createInitialState();
+    const reversed = completeEntries().map((entry) => entry.taskId === "attach-materials" ? { ...entry, roleIds: ["B", "A"] as const } : entry);
+    const progress = encodeProgress({ ...state, attempts: { ...state.attempts, [scenario.id]: { ...state.attempts[scenario.id]!, draftSchedule: { entries: reversed, learnerEdges: requiredEdgesFromScenario(scenario) } } } });
+    const persisted = JSON.parse(JSON.stringify(progress)) as typeof progress;
+    persisted.attempts[scenario.id].draftSchedule.entries.find((entry) => entry.taskId === "attach-materials")!.roleIds = ["B", "A"];
+    const decoded = decodeProgress(JSON.stringify(persisted));
+    expect(decoded?.attempts[scenario.id]?.draftSchedule.entries.find((entry) => entry.taskId === "attach-materials")?.roleIds).toEqual(["A", "B"]);
+    const roundTrip = encodeProgress(rehydrateProgress(decoded!));
+    expect(roundTrip.attempts[scenario.id].draftSchedule.entries.find((entry) => entry.taskId === "attach-materials")?.roleIds).toEqual(["A", "B"]);
+  });
+
+  it("keeps invalid role assignments invalid at the persisted boundary", () => {
+    const scenario = getScenario("science-display");
+    const progress = encodeProgress({ ...createInitialState(), saveEnabled: true });
+    const malformed = JSON.parse(JSON.stringify(progress)) as typeof progress;
+    malformed.attempts[scenario.id].draftSchedule.entries = [{ taskId: "attach-materials", plannedStart: 0, roleIds: ["A", "A"] }];
+    expect(decodeProgress(JSON.stringify(malformed))).toBeNull();
+  });
+
+  it("keeps list and grid output stable for reversed role input", () => {
+    const scenario = getScenario("science-display");
+    const canonical = completeEntries();
+    const reversed = canonical.map((entry) => entry.taskId === "attach-materials" ? { ...entry, roleIds: ["B", "A"] as const } : entry);
+    const listCanonical = render(<TimelineStepList scenario={scenario} entries={canonical} />).container.textContent;
+    cleanup();
+    const listReversed = render(<TimelineStepList scenario={scenario} entries={reversed} />).container.textContent;
+    expect(listReversed).toBe(listCanonical);
+    cleanup();
+    const { container: gridCanonical } = render(<TimelineGrid scenario={scenario} entries={canonical} onMove={() => undefined} />);
+    const canonicalButtons = [...gridCanonical.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"));
+    cleanup();
+    const { container: gridReversed } = render(<TimelineGrid scenario={scenario} entries={reversed} onMove={() => undefined} />);
+    expect([...gridReversed.querySelectorAll("button")].map((button) => button.getAttribute("aria-label"))).toEqual(canonicalButtons);
   });
 
   it("shows exactly one schedule pulse and runs only a complete draft", async () => {
