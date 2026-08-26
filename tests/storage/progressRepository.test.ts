@@ -96,6 +96,18 @@ describe("versioned local progress", () => {
     expect(Object.isFrozen(rebuilt.result.runs)).toBe(true);
   });
 
+  it("rejects unsafe planned starts at the persisted draft boundary", () => {
+    const progress = encodeProgress({ ...createInitialState(), saveEnabled: true });
+    const science = progress.attempts["science-display"];
+    const unsafe = {
+      ...science,
+      stage: "schedule" as const,
+      conditionsAcknowledged: true,
+      draftSchedule: { entries: [{ taskId: "verify-content", plannedStart: Number.MAX_SAFE_INTEGER + 1, roleIds: ["A"] }], learnerEdges: [] },
+    };
+    expect(decodeProgress(JSON.stringify({ ...progress, attempts: { ...progress.attempts, "science-display": unsafe } }))).toBeNull();
+  });
+
   it("rejects contradictory stage prerequisites and unknown selected findings", () => {
     const progress = encodeProgress({ ...createInitialState(), saveEnabled: true });
     const science = progress.attempts["science-display"];

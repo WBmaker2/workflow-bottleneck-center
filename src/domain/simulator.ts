@@ -40,7 +40,7 @@ const normalizeEntries = (
   scenario: ScenarioDefinition,
   draft: ScheduleDraft,
   taskOrder: ReadonlyMap<string, number>,
-): { entries: readonly NormalizedEntry[]; issues: readonly Issue[]; invalidTaskIds: ReadonlySet<string> } => {
+): { entries: readonly NormalizedEntry[]; issues: readonly Issue[]; invalidTaskIds: Set<string> } => {
   const taskById = new Map(scenario.tasks.map((task) => [task.id, task]));
   const roleOrder = new Map(scenario.roles.map(({ id }, index) => [id, index]));
   const groups = new Map<string, ScheduleEntry[]>();
@@ -79,7 +79,7 @@ const normalizeEntries = (
     }
     const entry = sorted[0]!;
     let valid = true;
-    if (!Number.isInteger(entry.plannedStart) || entry.plannedStart < 0) {
+    if (!Number.isSafeInteger(entry.plannedStart) || entry.plannedStart < 0) {
       issues.push(makeIssue("invalid-planned-start", "시작 시점은 0 이상의 정수여야 합니다.", taskId));
       valid = false;
     }
@@ -165,8 +165,21 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
   const blocked = new Set<string>(normalized.invalidTaskIds);
   const runs: TaskRun[] = [];
   const waits: WaitInterval[] = [];
-  const maxPlannedStart = Math.max(0, ...normalized.entries.map(({ entry }) => entry.plannedStart));
-  const upperBound = maxPlannedStart + scenario.tasks.reduce((sum, task) => sum + task.duration, 0) + 1;
+  const maxPlannedStart = normalized.entries.reduce((max, { entry }) => Math.max(max, entry.plannedStart), 0);
+  const totalDuration = scenario.tasks.reduce<number | null>((sum, task) => {
+    if (sum === null || !Number.isSafeInteger(task.duration) || task.duration < 0 || sum > Number.MAX_SAFE_INTEGER - task.duration) return null;
+    return sum + task.duration;
+  }, 0);
+  const upperBound = totalDuration === null || maxPlannedStart > Number.MAX_SAFE_INTEGER - totalDuration - 1
+    ? null
+    : maxPlannedStart + totalDuration + 1;
+  if (upperBound === null) {
+    const overflowTaskIds = normalized.entries.filter(({ entry }) => entry.plannedStart === maxPlannedStart).map(({ task }) => task.id);
+    for (const taskId of overflowTaskIds) {
+      normalized.invalidTaskIds.add(taskId);
+      issues.push(makeIssue("invalid-planned-start", "시작 시점과 작업 시간의 계산 범위를 벗어났습니다.", taskId));
+    }
+  }
   const resourceOrder = new Map(scenario.resources.map(({ id }, index) => [id, index]));
   const soloActive = (): boolean => [...active.values()].some(({ entry }) => entry.task.parallel === "solo");
   const hasUnavailablePredecessor = (taskId: string, seen = new Set<string>()): boolean => {
@@ -190,7 +203,8 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
     return undefined;
   };
 
-  for (let time = 0; time < upperBound; time += 1) {
+  let time = 0;
+  while (upperBound !== null && time < upperBound) {
     for (const [taskId, current] of active) {
       if (current.run.end <= time) {
         active.delete(taskId);
@@ -200,6 +214,13 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
     const pending = normalized.entries.filter(({ task }) => !started.has(task.id) && !blocked.has(task.id) && !completed.has(task.id) && validEntries.has(task.id));
     if (pending.length === 0 && active.size === 0) break;
     const due = pending.filter(({ entry }) => entry.plannedStart <= time);
+    if (active.size === 0 && due.length === 0 && pending.length > 0) {
+      const nextPlannedStart = pending.reduce((next, { entry }) => Math.min(next, entry.plannedStart), Number.MAX_SAFE_INTEGER);
+      if (nextPlannedStart > time) {
+        time = nextPlannedStart;
+        continue;
+      }
+    }
     let startedAtTime = false;
     for (const item of due) {
       const taskId = item.task.id;
@@ -248,6 +269,7 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
         break;
       }
     }
+    time += 1;
   }
 
   const unresolved = normalized.entries.filter(({ task }) => !started.has(task.id) && !blocked.has(task.id));

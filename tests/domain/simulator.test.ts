@@ -102,6 +102,32 @@ describe("deterministic virtual-time simulator", () => {
     expect(invalidResult.issues).toContainEqual(expect.objectContaining({ code: "invalid-role-count", taskId: "first" }));
   });
 
+  it("rejects an unsafe planned start without entering a long-running loop", () => {
+    const result = simulateSchedule(makeScenario({ tasks: [task("only")] }), {
+      learnerEdges: [],
+      entries: [{ taskId: "only", plannedStart: Number.MAX_SAFE_INTEGER + 1, roleIds: ["A"] }],
+    });
+    expect(result.runs).toEqual([]);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid-planned-start", taskId: "only" }));
+  });
+
+  it("jumps across a large idle gap while preserving exact virtual start and end", () => {
+    const scenario = makeScenario({ tasks: [task("first"), task("future")] });
+    const futureStart = Number.MAX_SAFE_INTEGER - 100;
+    const result = simulateSchedule(scenario, {
+      learnerEdges: [],
+      entries: [
+        { taskId: "first", plannedStart: 0, roleIds: ["A"] },
+        { taskId: "future", plannedStart: futureStart, roleIds: ["B"] },
+      ],
+    });
+    expect(result.runs).toEqual([
+      { taskId: "first", plannedStart: 0, actualStart: 0, end: 2, roleIds: ["A"] },
+      { taskId: "future", plannedStart: futureStart, actualStart: futureStart, end: futureStart + 2, roleIds: ["B"] },
+    ]);
+    expect(result.waits).toEqual([]);
+  });
+
   it("keeps waiting when a scheduled predecessor has a later planned start", () => {
     const scenario = makeScenario({ tasks: [task("first"), task("dependent", { prerequisites: [{ taskId: "first", kind: "workflow", reason: "먼저" }] })] });
     const result = simulateSchedule(scenario, {

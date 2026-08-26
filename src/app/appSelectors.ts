@@ -17,11 +17,15 @@ export const isScheduleReady = (scenario: ReturnType<typeof getScenario>, draft:
   if (!Array.isArray(draft.entries) || !Array.isArray(draft.learnerEdges)) return false;
   const taskIds = new Set(scenario.tasks.map(({ id }) => id));
   const roleIds: ReadonlySet<string> = new Set(scenario.roles.map(({ id }) => id));
-  if (draft.entries.length !== taskIds.size || new Set(draft.entries.map(({ taskId }) => taskId)).size !== taskIds.size) return false;
-  if (draft.entries.some(({ taskId, plannedStart, roleIds: assigned }) => {
+  if (draft.entries.length !== taskIds.size || new Set(draft.entries.map((entry) => entry && typeof entry === "object" ? entry.taskId : "")).size !== taskIds.size) return false;
+  if (draft.entries.some((entry) => {
+    if (entry === null || typeof entry !== "object") return true;
+    const { taskId, plannedStart, roleIds: assigned } = entry;
+    if (!Array.isArray(assigned)) return true;
     const task = scenario.tasks.find(({ id }) => id === taskId);
     return !task || !Number.isSafeInteger(plannedStart) || plannedStart < 0 || assigned.length !== task.peopleRequired || new Set(assigned).size !== assigned.length || assigned.some((roleId: unknown) => typeof roleId !== "string" || !roleIds.has(roleId));
   })) return false;
+  if (draft.learnerEdges.some((edge) => edge === null || typeof edge !== "object" || typeof edge.beforeTaskId !== "string" || typeof edge.afterTaskId !== "string")) return false;
   const relation = validateRelationMap(scenario, draft.learnerEdges);
   if (relation.missingRequired.length > 0 || relation.cycleTaskIds.length > 0 || relation.unknown.length > 0 || relation.duplicate.length > 0) return false;
   const result = simulateSchedule(scenario, draft);

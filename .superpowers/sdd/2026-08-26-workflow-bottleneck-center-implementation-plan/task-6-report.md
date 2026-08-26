@@ -114,4 +114,54 @@ git status --short
 # source changes staged for the fix commit; tsbuildinfo 생성물 없음
 ```
 
-Fix commit SHA: `44dcb0b` (`fix: harden learning progress boundaries`)
+Fix commit SHA: `02ab73c` (`fix: harden learning progress boundaries`)
+
+## Fix round 2/5
+
+### RED
+
+추가 회귀 테스트는 동기 무한 순회를 피하도록 작은 시나리오와 bounded 입력으로 작성했습니다. 변경 전 계약에서 다음 세 경계를 재현하는 실패 기준을 세웠습니다.
+
+```bash
+npm run test -- tests/domain/simulator.test.ts tests/app/appReducer.test.ts tests/storage/progressRepository.test.ts
+# RED cases: unsafe plannedStart의 invalid issue/run 차단,
+# 큰 arithmetic-safe idle gap의 즉시 점프 및 정확한 actualStart/end,
+# persisted unsafe plannedStart 거부
+```
+
+### GREEN
+
+- `plannedStart`는 `Number.isSafeInteger`로 검증하고, `upperBound`는 duration 합과 안전 범위를 검사합니다. 범위를 벗어난 항목은 `invalid-planned-start`로 즉시 제외합니다.
+- active/due 작업이 모두 없는 idle gap에서는 다음 안전한 `plannedStart`로 virtual time을 점프합니다. 기존 소형 schedule의 runs/waits deep equality를 유지합니다.
+- `isScheduleReady`는 안전 정수·완전한 task/role 구조·relation 계약을 확인한 뒤 순수 simulator 결과를 사용하며 별도 임의 time cap을 두지 않습니다.
+- storage decode/hydration은 unsafe plannedStart를 거부하고, `.gitignore`에 `*.tsbuildinfo`를 추가했습니다.
+
+Fix-round 2 검증:
+
+```bash
+npm run test -- tests/domain/simulator.test.ts tests/app/appReducer.test.ts tests/storage/progressRepository.test.ts
+# Test Files 3 passed, Tests 33 passed
+
+npm run test -- tests/app tests/storage tests/domain
+# Test Files 8 passed, Tests 54 passed
+
+npm test
+# Test Files 10 passed, Tests 57 passed
+
+npm run typecheck
+# passed
+
+npm run lint
+# passed with --max-warnings=0
+
+npm run check:file-length
+# Checked 36 source files (max 499 lines)
+
+npm run build
+# vite build passed
+
+git status --short
+# fix-round 변경 파일만 커밋 전 상태; tsbuildinfo 생성물 없음
+```
+
+Fix round 2 commit SHA: `dce2da9` (`fix: bound virtual schedule time safely`)
