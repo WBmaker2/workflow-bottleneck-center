@@ -192,6 +192,50 @@ describe("simulation presentation", () => {
     window.matchMedia = original;
   });
 
+  it("resets presentation when equal summary snapshots replace the session", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<SimulationScreen scenario={scenario} snapshot={snapshot} reducedMotion />);
+    await user.click(screen.getByRole("button", { name: "다음 단계" }));
+    const group = screen.getByRole("group", { name: "기다림 원인 예측" });
+    await user.click(within(group).getByRole("radio", { name: "먼저 끝날 작업을 기다림" }));
+    await user.type(within(group).getByRole("textbox"), "앞 작업이 끝나기를 기다립니다");
+    await user.click(within(group).getByRole("button", { name: "예측 저장" }));
+    const replacement = withResult({ waits: [{ taskId: "prepare-illustrations", from: 1, to: 2, reason: "role", roleId: "B" }] });
+    rerender(<SimulationScreen scenario={scenario} snapshot={replacement} reducedMotion />);
+    expect(screen.getByText("가상 시간 0단위 정지 화면")).toBeVisible();
+    expect(screen.queryByLabelText("예측 결과")).not.toBeInTheDocument();
+    expect(screen.queryByText("앞 작업이 끝나기를 기다립니다")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "다음 단계" }));
+    expect(screen.getByRole("group", { name: "기다림 원인 예측" })).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("기다림이 나타나 실행을 멈췄습니다.");
+    expect(screen.getByRole("status")).not.toHaveTextContent(/앞 작업|담당 역할/);
+  });
+
+  it("cleans the old playback interval when a snapshot changes during playback", async () => {
+    vi.useFakeTimers();
+    const replacement = withResult({ waits: [], finishTime: 5, runs: snapshot.result.runs.map((run) => ({ ...run, actualStart: run.actualStart + 1, end: run.end + 1 })) });
+    const { rerender } = render(<SimulationScreen scenario={scenario} snapshot={snapshot} reducedMotion={false} />);
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "가상 실행 시작" }));
+      rerender(<SimulationScreen scenario={scenario} snapshot={replacement} reducedMotion={false} />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(600); });
+      expect(screen.getByText("가상 시간 0단위")).toBeVisible();
+      expect(screen.getByRole("button", { name: "가상 실행 시작" })).toBeVisible();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a persisted prediction authoritative after presentation reset", () => {
+    const replacement = withResult({ waits: [{ taskId: "prepare-illustrations", from: 1, to: 2, reason: "role", roleId: "B" }] });
+    const { rerender } = render(<SimulationScreen scenario={scenario} snapshot={snapshot} reducedMotion prediction="dependency" predictionExplanation="저장된 예측 설명입니다" />);
+    rerender(<SimulationScreen scenario={scenario} snapshot={replacement} reducedMotion prediction="dependency" predictionExplanation="저장된 예측 설명입니다" />);
+    expect(screen.getByText("가상 시간 0단위 정지 화면")).toBeVisible();
+    expect(screen.getByLabelText("예측 결과")).toBeVisible();
+    expect(screen.getByText("내 설명: 저장된 예측 설명입니다")).toBeVisible();
+    expect(screen.getByRole("button", { name: "분석으로 이동" })).toBeVisible();
+  });
+
   it("returns false when matchMedia has no listener API", () => {
     const original = window.matchMedia;
     window.matchMedia = vi.fn(() => ({ matches: true }) as MediaQueryList);

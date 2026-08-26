@@ -34,10 +34,26 @@ export function SimulationScreen({ scenario, snapshot, reducedMotion: requestedR
   const [announcement, setAnnouncement] = useState("");
   const announcedEvents = useRef("");
   const announcedKinds = useRef(new Set<string>());
+  const sessionSnapshot = useRef(snapshot);
+  const sessionScenario = useRef(scenario);
+  const skipAnnouncementAfterReset = useRef(false);
   const earliestWait = waits.reduce<typeof waits[number] | null>((earliest, wait) => {
     if (!earliest || wait.from < earliest.from) return wait;
     return earliest;
   }, null);
+
+  useEffect(() => {
+    if (sessionSnapshot.current === snapshot && sessionScenario.current === scenario) return;
+    sessionSnapshot.current = snapshot;
+    sessionScenario.current = scenario;
+    skipAnnouncementAfterReset.current = true;
+    announcedEvents.current = "";
+    announcedKinds.current.clear();
+    setLocalSubmittedReason(null);
+    setSubmittedExplanation("");
+    setAnnouncement("");
+    setPlayback({ currentTime: 0, mode: "idle", predictionRequired: false });
+  }, [scenario, snapshot]);
 
   const advance = useCallback(() => {
     setPlayback((previous) => {
@@ -60,7 +76,7 @@ export function SimulationScreen({ scenario, snapshot, reducedMotion: requestedR
     if (reducedMotion || playback.mode !== "playing" || playback.predictionRequired) return undefined;
     const timer = globalThis.setInterval(advance, 600);
     return () => globalThis.clearInterval(timer);
-  }, [advance, playback.mode, playback.predictionRequired, reducedMotion]);
+  }, [advance, playback.mode, playback.predictionRequired, reducedMotion, snapshot]);
 
   const play = () => {
     if (playback.predictionRequired) return;
@@ -77,11 +93,17 @@ export function SimulationScreen({ scenario, snapshot, reducedMotion: requestedR
   const reset = () => {
     announcedEvents.current = "";
     announcedKinds.current.clear();
+    setLocalSubmittedReason(null);
+    setSubmittedExplanation("");
     setAnnouncement("");
     setPlayback({ currentTime: 0, mode: "idle", predictionRequired: false });
   };
 
   useEffect(() => {
+    if (skipAnnouncementAfterReset.current) {
+      skipAnnouncementAfterReset.current = false;
+      return;
+    }
     const starts = snapshot.result.runs.filter((run) => run.actualStart === playback.currentTime).map((run) => run.taskId);
     const finishes = snapshot.result.runs.filter((run) => run.end === playback.currentTime).map((run) => run.taskId);
     const waitsAtTime = waits.filter((wait) => wait.from === playback.currentTime);
