@@ -1,5 +1,6 @@
 import type { DragEvent } from "react";
 import type { ScheduleEntry, ScenarioDefinition } from "../../domain/types";
+import { isScheduleStart, scheduleStartUpperBound } from "../../domain/scheduleBounds";
 
 export interface TimelineGridProps {
   scenario: ScenarioDefinition;
@@ -8,22 +9,16 @@ export interface TimelineGridProps {
   onDelete?(taskId: string): void;
 }
 
-const horizonFor = (scenario: ScenarioDefinition, entries: readonly ScheduleEntry[]) => {
-  const taskDuration = new Map(scenario.tasks.map((task) => [task.id, task.duration]));
-  const latest = entries.reduce((max, entry) => Math.max(max, entry.plannedStart + (taskDuration.get(entry.taskId) ?? 0)), 0);
-  const upper = scenario.timeGoal + scenario.tasks.reduce((total, task) => total + task.duration, 0);
-  return Math.max(upper, latest);
-};
-
 const taskFor = (scenario: ScenarioDefinition, taskId: string) => scenario.tasks.find((task) => task.id === taskId);
 
 export function TimelineGrid({ scenario, entries, onMove, onDelete }: TimelineGridProps) {
-  const horizon = horizonFor(scenario, entries);
+  const horizon = scheduleStartUpperBound(scenario);
   const taskById = new Map(scenario.tasks.map((task) => [task.id, task]));
   const entryById = new Map(entries.map((entry) => [entry.taskId, entry]));
-  const taskForCell = (roleId: "A" | "B" | "C", time: number) => entries.find((entry) => {
+  const roleOrder = new Map(scenario.roles.map((role, index) => [role.id, index]));
+  const tasksForCell = (roleId: "A" | "B" | "C", time: number) => entries.filter((entry) => {
     const task = taskById.get(entry.taskId);
-    return task && entry.roleIds[0] === roleId && entry.plannedStart === time;
+    return task && entry.roleIds.includes(roleId) && entry.plannedStart === time;
   });
   const resourceTask = (resourceId: string, time: number) => entries.find((entry) => {
     const task = taskById.get(entry.taskId);
@@ -34,8 +29,10 @@ export function TimelineGrid({ scenario, entries, onMove, onDelete }: TimelineGr
 
   const drop = (event: DragEvent<HTMLDivElement>, time: number) => {
     event.preventDefault();
-    const taskId = event.dataTransfer.getData("text/plain");
-    if (taskId && entryById.has(taskId)) onMove(taskId, time);
+    const transfer = event.dataTransfer;
+    if (!transfer || typeof transfer.getData !== "function" || !isScheduleStart(scenario, time)) return;
+    const taskId = transfer.getData("text/plain");
+    if (typeof taskId === "string" && taskId.length > 0 && entryById.has(taskId)) onMove(taskId, time);
   };
 
   const dragStart = (event: DragEvent<HTMLButtonElement>, taskId: string) => {
@@ -57,8 +54,7 @@ export function TimelineGrid({ scenario, entries, onMove, onDelete }: TimelineGr
           <div role="row" className="timeline-grid__row" key={role.id} aria-label={`${entries.filter((entry) => entry.roleIds.includes(role.id)).map((entry) => `${entry.plannedStart}단위 ${taskById.get(entry.taskId)?.title ?? entry.taskId} `).join("")}${role.label}`}>
             <span role="rowheader">{role.label}</span>
             {times.map((time) => {
-              const entry = taskForCell(role.id, time);
-              const task = entry ? taskFor(scenario, entry.taskId) : undefined;
+              const cellEntries = tasksForCell(role.id, time);
               return (
                 <div
                   role="gridcell"
@@ -68,13 +64,19 @@ export function TimelineGrid({ scenario, entries, onMove, onDelete }: TimelineGr
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => drop(event, time)}
                 >
-                  {task && entry && (
-                    <div className="task-chip" data-task-id={task.id}>
-                      <button type="button" draggable onDragStart={(event) => dragStart(event, task.id)} aria-label={`${task.title} ${task.duration}단위`}>{task.title}</button>
-                      <span aria-hidden="true">{task.duration}단위</span>
-                      {onDelete && <button type="button" aria-label={`${task.title} 일정 삭제`} onClick={() => onDelete(task.id)}>삭제</button>}
-                    </div>
-                  )}
+                  {cellEntries.map((entry) => {
+                    const task = taskFor(scenario, entry.taskId);
+                    if (!task) return null;
+                    const assignedRoles = [...entry.roleIds].sort((left, right) => (roleOrder.get(left) ?? 99) - (roleOrder.get(right) ?? 99));
+                    const isPrimaryRole = assignedRoles[0] === role.id;
+                    return isPrimaryRole ? (
+                      <div className="task-chip" data-task-id={task.id} key={task.id}>
+                        <button type="button" draggable onDragStart={(event) => dragStart(event, task.id)} aria-label={`${task.title} ${task.duration}단위`}>{task.title}</button>
+                        <span aria-hidden="true">{task.duration}단위</span>
+                        {onDelete && <button type="button" aria-label={`${task.title} 일정 삭제`} onClick={() => onDelete(task.id)}>삭제</button>}
+                      </div>
+                    ) : <span className="task-occupancy" aria-label={`${task.title} ${task.duration}단위 ${role.label} 역할 점유`} key={`${task.id}-${role.id}`}>{`${task.title} · ${task.duration}단위`}</span>;
+                  })}
                 </div>
               );
             })}

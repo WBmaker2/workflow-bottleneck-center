@@ -1,6 +1,7 @@
 import { getScenario } from "../data/scenarios";
 import { validateRelationMap } from "../domain/relationValidator";
 import { simulateSchedule } from "../domain/simulator";
+import { isScheduleStart } from "../domain/scheduleBounds";
 import type { LearningStage, MissionAttempt } from "./appTypes";
 
 const stages: readonly LearningStage[] = ["briefing", "relations", "schedule", "simulation", "analysis", "revision", "report"];
@@ -14,6 +15,7 @@ const relationReady = (attempt: MissionAttempt): boolean => {
 };
 
 export const isScheduleReady = (scenario: ReturnType<typeof getScenario>, draft: MissionAttempt["draftSchedule"]): boolean => {
+  if (!draft || typeof draft !== "object") return false;
   if (!Array.isArray(draft.entries) || !Array.isArray(draft.learnerEdges)) return false;
   const taskIds = new Set(scenario.tasks.map(({ id }) => id));
   const roleIds: ReadonlySet<string> = new Set(scenario.roles.map(({ id }) => id));
@@ -23,7 +25,7 @@ export const isScheduleReady = (scenario: ReturnType<typeof getScenario>, draft:
     const { taskId, plannedStart, roleIds: assigned } = entry;
     if (!Array.isArray(assigned)) return true;
     const task = scenario.tasks.find(({ id }) => id === taskId);
-    return !task || !Number.isSafeInteger(plannedStart) || plannedStart < 0 || assigned.length !== task.peopleRequired || new Set(assigned).size !== assigned.length || assigned.some((roleId: unknown) => typeof roleId !== "string" || !roleIds.has(roleId));
+    return !task || !isScheduleStart(scenario, plannedStart) || assigned.length !== task.peopleRequired || new Set(assigned).size !== assigned.length || assigned.some((roleId: unknown) => typeof roleId !== "string" || !roleIds.has(roleId));
   })) return false;
   if (draft.learnerEdges.some((edge) => edge === null || typeof edge !== "object" || typeof edge.beforeTaskId !== "string" || typeof edge.afterTaskId !== "string")) return false;
   const relation = validateRelationMap(scenario, draft.learnerEdges);

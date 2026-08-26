@@ -1,6 +1,7 @@
 import { scenarioCatalog } from "../data/scenarios";
+import { getScenario } from "../data/scenarios";
 import type { LearningStage, ScheduleDraft, ScenarioId } from "../domain/types";
-import { canEnterStage } from "./appSelectors";
+import { canEnterStage, isScheduleReady } from "./appSelectors";
 import type { AppAction, AppState, AttemptSnapshot, LearningEvidence, MissionAttempt } from "./appTypes";
 
 const emptyEvidence: LearningEvidence = {
@@ -64,6 +65,13 @@ const stageMessage: Record<LearningStage, string> = {
 };
 
 const updateDraft = (draft: ScheduleDraft, updates: Partial<ScheduleDraft>): ScheduleDraft => freezeDraft({ ...draft, ...updates });
+const sameDraft = (left: unknown, right: ScheduleDraft): boolean => {
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+};
 
 export function appReducer(state: AppState, action: AppAction): AppState {
   if (action.type === "SELECT_SCENARIO") {
@@ -95,8 +103,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (attempt.initialSnapshot) return invalid(state, "최초 실행 결과가 저장되어 일정을 수정할 수 없습니다.");
       return withAttempt(state, Object.freeze({ ...attempt, draftSchedule: freezeDraft(action.draft), completed: false }));
     case "SAVE_INITIAL_SNAPSHOT":
-      if (attempt.stage !== "simulation") return invalid(state, "먼저 가상 실행 단계로 이동하세요.");
       if (attempt.initialSnapshot) return state;
+      if (attempt.stage !== "simulation" && attempt.stage !== "schedule") return invalid(state, "먼저 가상 실행 단계로 이동하세요.");
+      if (attempt.stage === "schedule") {
+        const scenario = getScenario(attempt.scenarioId);
+        if (!isScheduleReady(scenario, attempt.draftSchedule) || !sameDraft(action.snapshot?.draft, attempt.draftSchedule)) {
+          return invalid(state, "완전한 현재 일정만 최초 실행 결과로 저장할 수 있습니다.");
+        }
+      }
       return withAttempt(state, Object.freeze({ ...attempt, initialSnapshot: freezeSnapshot(action.snapshot), completed: false }));
     case "SET_PREDICTION":
       if (attempt.stage !== "simulation") return invalid(state, "실행 중에 기다림 원인을 예측하세요.");

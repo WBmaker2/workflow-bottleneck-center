@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ScheduleDraft, ScheduleEntry, ScenarioDefinition } from "../../domain/types";
+import { isScheduleStart, scheduleStartUpperBound } from "../../domain/scheduleBounds";
 
 export interface PlacementFormProps {
   scenario: ScenarioDefinition;
@@ -7,9 +8,6 @@ export interface PlacementFormProps {
   selectedTaskId: string | null;
   onPlace(entry: ScheduleEntry): void;
 }
-
-const maxStartFor = (scenario: ScenarioDefinition): number =>
-  scenario.timeGoal + scenario.tasks.reduce((total, task) => total + task.duration, 0);
 
 export function PlacementForm({ scenario, draft, selectedTaskId, onPlace }: PlacementFormProps) {
   const [taskId, setTaskId] = useState(selectedTaskId ?? "");
@@ -19,8 +17,8 @@ export function PlacementForm({ scenario, draft, selectedTaskId, onPlace }: Plac
   const alreadyPlaced = Boolean(task && draft.entries.some((entry) => entry.taskId === task.id));
   const selectedCount = roleIds.length;
   const remaining = task ? task.peopleRequired - selectedCount : 0;
-  const valid = Boolean(task) && plannedStart !== "" && Number.isSafeInteger(Number(plannedStart))
-    && Number(plannedStart) >= 0 && selectedCount === task?.peopleRequired;
+  const valid = Boolean(task) && plannedStart !== "" && isScheduleStart(scenario, Number(plannedStart))
+    && selectedCount === task?.peopleRequired;
 
   const selectTask = (nextTaskId: string) => {
     setTaskId(nextTaskId);
@@ -37,7 +35,8 @@ export function PlacementForm({ scenario, draft, selectedTaskId, onPlace }: Plac
   const place = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!task || !valid) return;
-    onPlace({ taskId: task.id, plannedStart: Number(plannedStart), roleIds: [...roleIds] });
+    const roleOrder = new Map(scenario.roles.map((role, index) => [role.id, index]));
+    onPlace({ taskId: task.id, plannedStart: Number(plannedStart), roleIds: [...roleIds].sort((left, right) => (roleOrder.get(left) ?? 99) - (roleOrder.get(right) ?? 99)) });
   };
 
   return (
@@ -52,7 +51,7 @@ export function PlacementForm({ scenario, draft, selectedTaskId, onPlace }: Plac
 
         <label htmlFor="placement-start">시작 시점</label>
         <select id="placement-start" name="placement-start" value={plannedStart} onChange={(event) => setPlannedStart(event.target.value)}>
-          {Array.from({ length: maxStartFor(scenario) + 1 }, (_, value) => <option key={value} value={value}>{value}단위</option>)}
+          {Array.from({ length: scheduleStartUpperBound(scenario) + 1 }, (_, value) => <option key={value} value={value}>{value}단위</option>)}
         </select>
 
         {task && <p className="placement-requirements">{`이 작업에는 역할 ${task.peopleRequired}명이 필요합니다.`}</p>}

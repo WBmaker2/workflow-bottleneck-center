@@ -7,6 +7,7 @@ import type { DependencyEdge, ScheduleDraft, ScenarioDefinition, ScenarioId } fr
 import { createInitialState } from "../app/appReducer";
 import { isScheduleReady } from "../app/appSelectors";
 import { validateRelationMap } from "../domain/relationValidator";
+import { isScheduleStart } from "../domain/scheduleBounds";
 import type { AppProgressV1, AppState, LearningEvidence, MissionAttempt, PersistedMissionAttempt, AttemptSnapshot } from "../app/appTypes";
 
 const scenarioIds: ReadonlySet<string> = new Set(scenarioCatalog.map(({ id }) => id));
@@ -15,7 +16,6 @@ const reasons = new Set(["dependency", "resource", "role", "solo"]);
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const isString = (value: unknown): value is string => typeof value === "string";
 const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
-const isSafeStart = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 const isScenarioId = (value: unknown): value is ScenarioId => isString(value) && scenarioIds.has(value);
 const cloneFreeze = <T>(value: T): T => {
   if (value === null || typeof value !== "object") return value;
@@ -41,7 +41,7 @@ const readDraft = (value: unknown, scenario: ScenarioDefinition): ScheduleDraft 
   const entries = [];
   const roleIds: ReadonlySet<string> = new Set(scenario.roles.map(({ id }) => id));
   for (const item of value.entries) {
-    if (!isRecord(item) || !isString(item.taskId) || !taskIds.has(item.taskId) || !isSafeStart(item.plannedStart) || !Array.isArray(item.roleIds) || item.roleIds.some((id) => !isString(id) || !roleIds.has(id))) return null;
+    if (!isRecord(item) || !isString(item.taskId) || !taskIds.has(item.taskId) || !isScheduleStart(scenario, item.plannedStart) || !Array.isArray(item.roleIds) || item.roleIds.some((id) => !isString(id) || !roleIds.has(id))) return null;
     entries.push({ taskId: item.taskId, plannedStart: item.plannedStart, roleIds: item.roleIds.map(String) as ("A" | "B" | "C")[] });
   }
   return { entries, learnerEdges };

@@ -16,6 +16,7 @@ export function RequiredActionButton({ actionId, activeActionId, children, disab
       type="button"
       className={isActive ? "required-action gi-pulse" : "required-action"}
       data-testid="required-action"
+      data-action-id={actionId}
       {...(isActive ? { "data-pulse": "true" } : {})}
       disabled={disabled}
       onClick={onClick}
