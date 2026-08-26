@@ -4,6 +4,7 @@ import { BriefingScreen } from "./features/briefing/BriefingScreen";
 import { LiveStatus } from "./components/LiveStatus";
 import { UpdateHistoryButton } from "./components/UpdateHistoryButton";
 import { RelationScreen } from "./features/relations/RelationScreen";
+import { ScheduleScreen } from "./features/schedule/ScheduleScreen";
 
 const stageLabels = {
   briefing: "안내",
@@ -52,6 +53,17 @@ function AppShell() {
             attempt={attempt}
             onChange={(edges) => dispatch({ type: "SET_RELATIONS", edges })}
             onContinue={() => dispatch({ type: "ENTER_STAGE", stage: "schedule" })}
+          />
+        ) : attempt.stage === "schedule" ? (
+          <ScheduleScreen
+            scenario={scenario}
+            attempt={attempt}
+            onChange={(draft) => dispatch({ type: "SET_DRAFT_SCHEDULE", draft })}
+            onRun={(snapshot) => {
+              if (!snapshot) return;
+              dispatch({ type: "SAVE_INITIAL_SNAPSHOT", snapshot });
+              dispatch({ type: "ENTER_STAGE", stage: "simulation" });
+            }}
           />
         ) : (
           <section aria-labelledby="next-stage-title">
