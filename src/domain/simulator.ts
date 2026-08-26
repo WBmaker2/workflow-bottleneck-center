@@ -97,7 +97,7 @@ const normalizeEntries = (
       valid = false;
     }
     const resourceCapacity = new Map(scenario.resources.map(({ id, capacity }) => [id, capacity]));
-    if (task.resources.some(({ resourceId, quantity }) => !resourceCapacity.has(resourceId) || quantity > (resourceCapacity.get(resourceId) ?? 0))) {
+    if ([...aggregateResources(task)].some(([resourceId, quantity]) => !resourceCapacity.has(resourceId) || quantity > (resourceCapacity.get(resourceId) ?? 0))) {
       issues.push(makeIssue("invalid-resource-requirement", "작업의 자원 요구를 충족할 수 없습니다.", taskId));
       valid = false;
     }
@@ -132,6 +132,14 @@ const compareTaskIds = (taskOrder: ReadonlyMap<string, number>) => (left: string
 const wait = (taskId: string, from: number, reason: WaitReason, details: Partial<WaitInterval> = {}): WaitInterval =>
   ({ taskId, from, to: from + 1, reason, ...details });
 
+const aggregateResources = (task: TaskDefinition): ReadonlyMap<string, number> => {
+  const quantities = new Map<string, number>();
+  for (const requirement of task.resources) {
+    quantities.set(requirement.resourceId, (quantities.get(requirement.resourceId) ?? 0) + requirement.quantity);
+  }
+  return quantities;
+};
+
 export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDraft): SimulationResult {
   const taskOrder = new Map(scenario.tasks.map((task, index) => [task.id, index]));
   const normalized = normalizeEntries(scenario, draft, taskOrder);
@@ -142,11 +150,11 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
   for (const edge of [...relation.unknown, ...relation.duplicate]) {
     issues.push(makeIssue("invalid-relation", `유효하지 않은 관계입니다: ${edgeKey(edge)}`));
   }
-  if (relation.cycleTaskIds.length > 0) {
+  const dependencies = unionDependencies(scenario, draft.learnerEdges ?? [], taskOrder);
+  const effectiveRelation = validateRelationMap(scenario, dependencies);
+  if (effectiveRelation.cycleTaskIds.length > 0) {
     issues.push(makeIssue("cyclic-relation", "순환 관계는 실행할 수 없습니다."));
   }
-
-  const dependencies = unionDependencies(scenario, draft.learnerEdges ?? [], taskOrder);
   const predecessors = new Map<string, string[]>(scenario.tasks.map((task) => [task.id, []]));
   for (const edge of dependencies) predecessors.get(edge.afterTaskId)!.push(edge.beforeTaskId);
   for (const ids of predecessors.values()) ids.sort(compareTaskIds(taskOrder));
@@ -162,22 +170,22 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
   const resourceOrder = new Map(scenario.resources.map(({ id }, index) => [id, index]));
   const soloActive = (): boolean => [...active.values()].some(({ entry }) => entry.task.parallel === "solo");
   const hasUnavailablePredecessor = (taskId: string, seen = new Set<string>()): boolean => {
-    if (seen.has(taskId) || relation.cycleTaskIds.includes(taskId)) return true;
+    if (seen.has(taskId) || effectiveRelation.cycleTaskIds.includes(taskId)) return true;
     seen.add(taskId);
     return (predecessors.get(taskId) ?? []).some((predecessor) =>
       !validEntries.has(predecessor) || hasUnavailablePredecessor(predecessor, new Set(seen)));
   };
 
   const resourceBlocker = (item: NormalizedEntry): { resourceId: string; blockerTaskId: string } | undefined => {
-    const requirements = [...item.task.resources].sort((left, right) =>
-      (resourceOrder.get(left.resourceId) ?? Number.POSITIVE_INFINITY) - (resourceOrder.get(right.resourceId) ?? Number.POSITIVE_INFINITY) || textCompare(left.resourceId, right.resourceId));
-    for (const requirement of requirements) {
-      const capacity = scenario.resources.find(({ id }) => id === requirement.resourceId)?.capacity ?? 0;
+    const requirements = [...aggregateResources(item.task)].sort(([left], [right]) =>
+      (resourceOrder.get(left) ?? Number.POSITIVE_INFINITY) - (resourceOrder.get(right) ?? Number.POSITIVE_INFINITY) || textCompare(left, right));
+    for (const [resourceId, quantity] of requirements) {
+      const capacity = scenario.resources.find(({ id }) => id === resourceId)?.capacity ?? 0;
       const occupants = [...active.values()]
-        .filter(({ entry }) => entry.task.resources.some((resource) => resource.resourceId === requirement.resourceId))
+        .filter(({ entry }) => aggregateResources(entry.task).has(resourceId))
         .sort((left, right) => left.entry.order - right.entry.order);
-      const occupied = occupants.reduce((sum, occupant) => sum + (occupant.entry.task.resources.find((resource) => resource.resourceId === requirement.resourceId)?.quantity ?? 0), 0);
-      if (occupied + requirement.quantity > capacity && occupants[0]) return { resourceId: requirement.resourceId, blockerTaskId: occupants[0].run.taskId };
+      const occupied = occupants.reduce((sum, occupant) => sum + (aggregateResources(occupant.entry.task).get(resourceId) ?? 0), 0);
+      if (occupied + quantity > capacity && occupants[0]) return { resourceId, blockerTaskId: occupants[0].run.taskId };
     }
     return undefined;
   };
@@ -234,7 +242,8 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
     }
     if (active.size === 0 && !startedAtTime) {
       const stillDue = normalized.entries.filter(({ task, entry }) => !started.has(task.id) && !blocked.has(task.id) && entry.plannedStart <= time);
-      if (stillDue.length > 0 && stillDue.every(({ task }) => hasUnavailablePredecessor(task.id))) {
+      const futurePending = normalized.entries.some(({ task, entry }) => !started.has(task.id) && !blocked.has(task.id) && entry.plannedStart > time);
+      if (stillDue.length > 0 && !futurePending && stillDue.every(({ task }) => hasUnavailablePredecessor(task.id))) {
         for (const item of stillDue) blocked.add(item.task.id);
         break;
       }
@@ -247,7 +256,7 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
     issues.push(makeIssue("simulation-bound", "시뮬레이션 상한 안에서 실행되지 않았습니다.", item.task.id));
   }
   const orderedRuns = [...runs].sort((left, right) => compareTaskIds(taskOrder)(left.taskId, right.taskId));
-  const mergedWaits = [...mergeWaitIntervals(waits)].sort((left, right) => compareTaskIds(taskOrder)(left.taskId, right.taskId) || left.from - right.from);
+  const mergedWaits = [...mergeWaitIntervals(waits, taskOrder)].sort((left, right) => compareTaskIds(taskOrder)(left.taskId, right.taskId) || left.from - right.from);
   const orderedIssues = issues.sort((left, right) =>
     compareTaskIds(taskOrder)(left.taskId ?? "", right.taskId ?? "") || textCompare(left.code, right.code) || textCompare(left.message, right.message));
   const finishTime = orderedRuns.reduce((latest, run) => Math.max(latest, run.end), 0);

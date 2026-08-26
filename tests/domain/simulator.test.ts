@@ -118,6 +118,52 @@ describe("deterministic virtual-time simulator", () => {
     ]);
   });
 
+  it("continues to a future independent task after blocking an omitted predecessor", () => {
+    const scenario = makeScenario({ tasks: [
+      task("first"),
+      task("dependent", { prerequisites: [{ taskId: "first", kind: "workflow", reason: "먼저" }] }),
+      task("future"),
+    ] });
+    const result = simulateSchedule(scenario, {
+      learnerEdges: [],
+      entries: [
+        { taskId: "dependent", plannedStart: 0, roleIds: ["A"] },
+        { taskId: "future", plannedStart: 3, roleIds: ["B"] },
+      ],
+    });
+    expect(result.blockedTaskIds).toEqual(["dependent"]);
+    expect(result.runs).toContainEqual({ taskId: "future", plannedStart: 3, actualStart: 3, end: 5, roleIds: ["B"] });
+  });
+
+  it("aggregates repeated resource requirements before checking capacity", () => {
+    const scenario = makeScenario({
+      tasks: [task("double", { resources: [
+        { resourceId: "shared-card-set", quantity: 1 },
+        { resourceId: "shared-card-set", quantity: 1 },
+      ] })],
+      resources: [{ id: "shared-card-set", label: "공유 카드", capacity: 1 }],
+    });
+    const result = simulateSchedule(scenario, { learnerEdges: [], entries: [{ taskId: "double", plannedStart: 0, roleIds: ["A"] }] });
+    expect(result.runs).toEqual([]);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid-resource-requirement", taskId: "double" }));
+  });
+
+  it("diagnoses a cycle formed by canonical and learner edges", () => {
+    const scenario = makeScenario({ tasks: [
+      task("first"),
+      task("second", { prerequisites: [{ taskId: "first", kind: "workflow", reason: "먼저" }] }),
+    ] });
+    const result = simulateSchedule(scenario, {
+      learnerEdges: [{ beforeTaskId: "second", afterTaskId: "first" }],
+      entries: [
+        { taskId: "first", plannedStart: 0, roleIds: ["A"] },
+        { taskId: "second", plannedStart: 0, roleIds: ["B"] },
+      ],
+    });
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "cyclic-relation" }));
+    expect(result.blockedTaskIds).toEqual(["first", "second"]);
+  });
+
   it("merges consecutive unit waits with the same cause", () => {
     expect(mergeWaitIntervals([
       { taskId: "task", from: 1, to: 2, reason: "dependency", blockerTaskId: "before" },
@@ -127,5 +173,13 @@ describe("deterministic virtual-time simulator", () => {
       { taskId: "task", from: 0, to: 2, reason: "dependency", blockerTaskId: "before" },
       { taskId: "task", from: 2, to: 3, reason: "role", roleId: "A" },
     ]);
+  });
+
+  it("uses an optional scenario-order map while preserving one-argument compatibility", () => {
+    const intervals = [
+      { taskId: "right", from: 0, to: 1, reason: "solo" as const },
+      { taskId: "left", from: 0, to: 1, reason: "solo" as const },
+    ];
+    expect(mergeWaitIntervals(intervals, new Map([["right", 0], ["left", 1]])).map(({ taskId }) => taskId)).toEqual(["right", "left"]);
   });
 });

@@ -1,6 +1,7 @@
 import type { WaitInterval } from "./types";
 
 type Cause = Pick<WaitInterval, "taskId" | "reason" | "blockerTaskId" | "resourceId" | "roleId">;
+export type TaskOrder = ReadonlyMap<string, number> | ((left: string, right: string) => number);
 
 const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0);
 
@@ -11,8 +12,12 @@ const sameCause = (left: WaitInterval, right: WaitInterval): boolean =>
   left.resourceId === right.resourceId &&
   left.roleId === right.roleId;
 
-const compareIntervals = (left: WaitInterval, right: WaitInterval): number => {
-  const taskDifference = compareText(left.taskId, right.taskId);
+const compareIntervals = (left: WaitInterval, right: WaitInterval, order?: TaskOrder): number => {
+  const taskDifference = order === undefined
+    ? compareText(left.taskId, right.taskId)
+    : typeof order === "function"
+      ? order(left.taskId, right.taskId)
+      : (order.get(left.taskId) ?? Number.POSITIVE_INFINITY) - (order.get(right.taskId) ?? Number.POSITIVE_INFINITY) || compareText(left.taskId, right.taskId);
   if (taskDifference !== 0) return taskDifference;
   if (left.from !== right.from) return left.from - right.from;
   if (left.to !== right.to) return left.to - right.to;
@@ -30,11 +35,11 @@ const cloneCause = (interval: WaitInterval): WaitInterval => {
 };
 
 /** Return stable, minimal intervals for waits that have the same causal blocker. */
-export function mergeWaitIntervals(intervals: readonly WaitInterval[]): readonly WaitInterval[] {
+export function mergeWaitIntervals(intervals: readonly WaitInterval[], order?: TaskOrder): readonly WaitInterval[] {
   const sorted = intervals
     .filter((interval) => Number.isInteger(interval.from) && Number.isInteger(interval.to) && interval.to > interval.from)
     .map(cloneCause)
-    .sort(compareIntervals);
+    .sort((left, right) => compareIntervals(left, right, order));
   const merged: WaitInterval[] = [];
 
   for (const interval of sorted) {
