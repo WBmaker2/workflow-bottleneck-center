@@ -164,4 +164,54 @@ git status --short
 # fix-round 변경 파일만 커밋 전 상태; tsbuildinfo 생성물 없음
 ```
 
-Fix round 2 commit SHA: `dce2da9` (`fix: bound virtual schedule time safely`)
+Fix round 2 commit SHA: `b4a6664` (`fix: bound virtual schedule time safely`)
+
+## Fix round 3/5
+
+### RED
+
+due 상태에서 미래 predecessor를 기다리는 큰 시각을 unit loop로 처리하지 않도록 bounded 회귀 기준을 추가했습니다. 변경 전 기준에서 다음 케이스를 재현하는 실패 조건을 고정했습니다.
+
+```bash
+npm run test -- tests/domain/simulator.test.ts tests/app/appReducer.test.ts tests/storage/progressRepository.test.ts
+# RED cases: no-active due dependency의 timeout/반복 wait,
+# 다중 future predecessor의 next-event/blocker 경계,
+# overflow entry와 valid lower entry의 spurious simulation-bound
+```
+
+### GREEN
+
+- active task가 없고 모든 due task가 미래 predecessor를 기다릴 때만 다음 pending plannedStart로 점프하고, 각 dependency wait를 `[time,nextEvent)`로 기록합니다.
+- due predecessor가 같은 시점에 시작되는 경우에는 먼저 정상 실행한 뒤, 다음 no-active 경계에서 blocker를 재선택하여 기존 unit semantics와 같은 coalesced spans를 만듭니다.
+- upper-bound overflow 시 overflow entry만 valid map에서 제외하고 남은 valid entries로 bound를 다시 계산하여 낮은 작업을 정상 실행합니다.
+- round 2의 large independent idle gap, unsafe start, 소형 deterministic 결과와 storage rejection을 유지했습니다.
+
+Fix-round 3 검증:
+
+```bash
+npm run test -- tests/domain/simulator.test.ts tests/app/appReducer.test.ts tests/storage/progressRepository.test.ts
+# Test Files 3 passed, Tests 35 passed
+
+npm run test -- tests/app tests/storage tests/domain
+# Test Files 8 passed, Tests 56 passed
+
+npm test
+# Test Files 11 passed, Tests 60 passed
+
+npm run typecheck
+# passed
+
+npm run lint
+# passed with --max-warnings=0
+
+npm run check:file-length
+# Checked 37 source files (max 499 lines)
+
+npm run build
+# vite build passed
+
+git status --short
+# pre-existing unrelated untracked tests/review-temp-overflow.test.ts remains; Task 6 files are the only staged changes
+```
+
+Fix round 3 commit SHA: `dbec78b` (`fix: coalesce future dependency waits`)

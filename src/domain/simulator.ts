@@ -144,7 +144,6 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
   const taskOrder = new Map(scenario.tasks.map((task, index) => [task.id, index]));
   const normalized = normalizeEntries(scenario, draft, taskOrder);
   const validEntries = new Map(normalized.entries.map((item) => [item.task.id, item]));
-  const omittedTaskIds = scenario.tasks.filter((task) => !validEntries.has(task.id)).map((task) => task.id);
   const relation = validateRelationMap(scenario, draft.learnerEdges ?? []);
   const issues: Issue[] = [...normalized.issues];
   for (const edge of [...relation.unknown, ...relation.duplicate]) {
@@ -165,21 +164,32 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
   const blocked = new Set<string>(normalized.invalidTaskIds);
   const runs: TaskRun[] = [];
   const waits: WaitInterval[] = [];
-  const maxPlannedStart = normalized.entries.reduce((max, { entry }) => Math.max(max, entry.plannedStart), 0);
-  const totalDuration = scenario.tasks.reduce<number | null>((sum, task) => {
+  let simulationEntries = [...normalized.entries];
+  const calculateBounds = (): { maxPlannedStart: number; totalDuration: number | null; upperBound: number | null } => {
+    const maxPlannedStart = simulationEntries.reduce((max, { entry }) => Math.max(max, entry.plannedStart), 0);
+    const totalDuration = simulationEntries.reduce<number | null>((sum, { task }) => {
     if (sum === null || !Number.isSafeInteger(task.duration) || task.duration < 0 || sum > Number.MAX_SAFE_INTEGER - task.duration) return null;
     return sum + task.duration;
-  }, 0);
-  const upperBound = totalDuration === null || maxPlannedStart > Number.MAX_SAFE_INTEGER - totalDuration - 1
-    ? null
-    : maxPlannedStart + totalDuration + 1;
-  if (upperBound === null) {
-    const overflowTaskIds = normalized.entries.filter(({ entry }) => entry.plannedStart === maxPlannedStart).map(({ task }) => task.id);
-    for (const taskId of overflowTaskIds) {
-      normalized.invalidTaskIds.add(taskId);
-      issues.push(makeIssue("invalid-planned-start", "시작 시점과 작업 시간의 계산 범위를 벗어났습니다.", taskId));
+    }, 0);
+    const upperBound = totalDuration === null || maxPlannedStart > Number.MAX_SAFE_INTEGER - totalDuration - 1
+      ? null
+      : maxPlannedStart + totalDuration + 1;
+    return { maxPlannedStart, totalDuration, upperBound };
+  };
+  let bounds = calculateBounds();
+  while (bounds.upperBound === null && simulationEntries.length > 0) {
+    const overflowItems = simulationEntries.filter(({ entry }) => entry.plannedStart === bounds.maxPlannedStart);
+    if (overflowItems.length === 0) break;
+    for (const item of overflowItems) {
+      blocked.add(item.task.id);
+      validEntries.delete(item.task.id);
+      issues.push(makeIssue("invalid-planned-start", "시작 시점과 작업 시간의 계산 범위를 벗어났습니다.", item.task.id));
     }
+    simulationEntries = simulationEntries.filter(({ task }) => !blocked.has(task.id));
+    bounds = calculateBounds();
   }
+  const { upperBound } = bounds;
+  const omittedTaskIds = scenario.tasks.filter((task) => !validEntries.has(task.id)).map((task) => task.id);
   const resourceOrder = new Map(scenario.resources.map(({ id }, index) => [id, index]));
   const soloActive = (): boolean => [...active.values()].some(({ entry }) => entry.task.parallel === "solo");
   const hasUnavailablePredecessor = (taskId: string, seen = new Set<string>()): boolean => {
@@ -211,9 +221,27 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
         completed.add(taskId);
       }
     }
-    const pending = normalized.entries.filter(({ task }) => !started.has(task.id) && !blocked.has(task.id) && !completed.has(task.id) && validEntries.has(task.id));
+    const pending = simulationEntries.filter(({ task }) => !started.has(task.id) && !blocked.has(task.id) && !completed.has(task.id) && validEntries.has(task.id));
     if (pending.length === 0 && active.size === 0) break;
     const due = pending.filter(({ entry }) => entry.plannedStart <= time);
+    if (active.size === 0 && due.length > 0) {
+      const futurePending = pending.filter(({ entry }) => entry.plannedStart > time);
+      const nextEvent = futurePending.reduce((next, { entry }) => Math.min(next, entry.plannedStart), Number.MAX_SAFE_INTEGER);
+      if (nextEvent > time && nextEvent < Number.MAX_SAFE_INTEGER) {
+        const waitingForFuture = due.filter(({ task }) => {
+          const unmet = (predecessors.get(task.id) ?? []).filter((predecessor) => !completed.has(predecessor));
+          return unmet.length > 0 && !hasUnavailablePredecessor(task.id);
+        });
+        if (waitingForFuture.length === due.length && waitingForFuture.length > 0) {
+          for (const item of waitingForFuture) {
+            const blockerTaskId = (predecessors.get(item.task.id) ?? []).find((predecessor) => !completed.has(predecessor));
+            if (blockerTaskId) waits.push({ taskId: item.task.id, from: time, to: nextEvent, reason: "dependency", blockerTaskId });
+          }
+          time = nextEvent;
+          continue;
+        }
+      }
+    }
     if (active.size === 0 && due.length === 0 && pending.length > 0) {
       const nextPlannedStart = pending.reduce((next, { entry }) => Math.min(next, entry.plannedStart), Number.MAX_SAFE_INTEGER);
       if (nextPlannedStart > time) {
@@ -262,8 +290,8 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
       startedAtTime = true;
     }
     if (active.size === 0 && !startedAtTime) {
-      const stillDue = normalized.entries.filter(({ task, entry }) => !started.has(task.id) && !blocked.has(task.id) && entry.plannedStart <= time);
-      const futurePending = normalized.entries.some(({ task, entry }) => !started.has(task.id) && !blocked.has(task.id) && entry.plannedStart > time);
+      const stillDue = simulationEntries.filter(({ task, entry }) => !started.has(task.id) && !blocked.has(task.id) && entry.plannedStart <= time);
+      const futurePending = simulationEntries.some(({ task, entry }) => !started.has(task.id) && !blocked.has(task.id) && entry.plannedStart > time);
       if (stillDue.length > 0 && !futurePending && stillDue.every(({ task }) => hasUnavailablePredecessor(task.id))) {
         for (const item of stillDue) blocked.add(item.task.id);
         break;
@@ -272,7 +300,7 @@ export function simulateSchedule(scenario: ScenarioDefinition, draft: ScheduleDr
     time += 1;
   }
 
-  const unresolved = normalized.entries.filter(({ task }) => !started.has(task.id) && !blocked.has(task.id));
+  const unresolved = simulationEntries.filter(({ task }) => !started.has(task.id) && !blocked.has(task.id));
   for (const item of unresolved) {
     blocked.add(item.task.id);
     issues.push(makeIssue("simulation-bound", "시뮬레이션 상한 안에서 실행되지 않았습니다.", item.task.id));

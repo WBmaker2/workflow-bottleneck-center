@@ -128,6 +128,48 @@ describe("deterministic virtual-time simulator", () => {
     expect(result.waits).toEqual([]);
   });
 
+  it("jumps due dependency waits to each future predecessor event and coalesces spans", () => {
+    const scenario = makeScenario({ tasks: [
+      task("a"),
+      task("b", { prerequisites: [
+        { taskId: "a", kind: "workflow", reason: "a를 먼저 합니다" },
+        { taskId: "c", kind: "workflow", reason: "c를 먼저 합니다" },
+      ] }),
+      task("c"),
+    ] });
+    const result = simulateSchedule(scenario, {
+      learnerEdges: [],
+      entries: [
+        { taskId: "a", plannedStart: Number.MAX_SAFE_INTEGER - 100, roleIds: ["A"] },
+        { taskId: "b", plannedStart: 0, roleIds: ["B"] },
+        { taskId: "c", plannedStart: Number.MAX_SAFE_INTEGER - 80, roleIds: ["C"] },
+      ],
+    });
+    expect(result.runs).toEqual([
+      { taskId: "a", plannedStart: Number.MAX_SAFE_INTEGER - 100, actualStart: Number.MAX_SAFE_INTEGER - 100, end: Number.MAX_SAFE_INTEGER - 98, roleIds: ["A"] },
+      { taskId: "b", plannedStart: 0, actualStart: Number.MAX_SAFE_INTEGER - 78, end: Number.MAX_SAFE_INTEGER - 76, roleIds: ["B"] },
+      { taskId: "c", plannedStart: Number.MAX_SAFE_INTEGER - 80, actualStart: Number.MAX_SAFE_INTEGER - 80, end: Number.MAX_SAFE_INTEGER - 78, roleIds: ["C"] },
+    ]);
+    expect(result.waits).toEqual([
+      { taskId: "b", from: 0, to: Number.MAX_SAFE_INTEGER - 98, reason: "dependency", blockerTaskId: "a" },
+      { taskId: "b", from: Number.MAX_SAFE_INTEGER - 98, to: Number.MAX_SAFE_INTEGER - 78, reason: "dependency", blockerTaskId: "c" },
+    ]);
+  });
+
+  it("runs lower valid entries when a separate overflow entry is excluded", () => {
+    const result = simulateSchedule(makeScenario({ tasks: [task("low"), task("overflow")] }), {
+      learnerEdges: [],
+      entries: [
+        { taskId: "low", plannedStart: 0, roleIds: ["A"] },
+        { taskId: "overflow", plannedStart: Number.MAX_SAFE_INTEGER + 1, roleIds: ["B"] },
+      ],
+    });
+    expect(result.runs).toEqual([{ taskId: "low", plannedStart: 0, actualStart: 0, end: 2, roleIds: ["A"] }]);
+    expect(result.blockedTaskIds).toEqual(["overflow"]);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid-planned-start", taskId: "overflow" }));
+    expect(result.issues).not.toContainEqual(expect.objectContaining({ code: "simulation-bound", taskId: "low" }));
+  });
+
   it("keeps waiting when a scheduled predecessor has a later planned start", () => {
     const scenario = makeScenario({ tasks: [task("first"), task("dependent", { prerequisites: [{ taskId: "first", kind: "workflow", reason: "먼저" }] })] });
     const result = simulateSchedule(scenario, {
