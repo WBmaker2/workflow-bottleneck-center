@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { useState } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "vitest-axe";
 import { RelationScreen } from "../../src/features/relations/RelationScreen";
@@ -42,7 +42,7 @@ describe("accessible relationship design", () => {
     expect(document.activeElement).toBe(screen.getByRole("alert"));
 
     const extra: DependencyEdge = { beforeTaskId: "verify-content", afterTaskId: "final-review" };
-    renderRelationScreen([extra]);
+    renderRelationScreen([...requiredEdgesFromScenario(getScenario("science-display")), extra]);
     expect(screen.getByText(/학생이 추가한 관계는 안전하지만 기다림이 늘어날 수 있습니다/)).toBeVisible();
   });
 
@@ -109,5 +109,32 @@ describe("accessible relationship design", () => {
     await user.click(relationList.getAllByRole("button", { name: "자료 확인과 인쇄 글 정리 관계 삭제" })[0]!);
     expect(relationList.getAllByRole("listitem")).toHaveLength(1);
     error.mockRestore();
+  });
+
+  it("shows the screen-level safe/wait summary only for valid-with-extra", () => {
+    const scenario = getScenario("science-display");
+    const required = requiredEdgesFromScenario(scenario);
+    const extra = { beforeTaskId: "verify-content", afterTaskId: "final-review" } as const;
+    const safeText = "학생이 추가한 관계는 안전하지만 기다림이 늘어날 수 있습니다. 필요하다면 삭제하고 흐름을 비교해 보세요.";
+    const renderAttempt = (edges: readonly DependencyEdge[]) => { cleanup(); return render(<RelationScreen scenario={scenario} attempt={{ relationEdges: edges }} onChange={() => undefined} onContinue={() => undefined} />); };
+
+    renderAttempt([...required, extra]);
+    expect(screen.getByText(safeText)).toBeVisible();
+
+    renderAttempt([...required, extra, required[0]!]);
+    expect(screen.queryByText(safeText)).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("같은 관계가 두 번 있어 하나만 남겨야 합니다.");
+
+    renderAttempt([...required, extra, { beforeTaskId: "prepare-print-file", afterTaskId: "verify-content" }]);
+    expect(screen.queryByText(safeText)).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("작업이 서로를 기다리는 순환 관계라 확인해야 합니다.");
+
+    renderAttempt([...required, extra, { beforeTaskId: "unknown-task", afterTaskId: "verify-content" }]);
+    expect(screen.queryByText(safeText)).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("알 수 없는 작업을 포함해 관계를 확인해야 합니다.");
+
+    renderAttempt([extra]);
+    expect(screen.queryByText(safeText)).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("작업 카드에 공개된 관계를 다시 확인하세요: 글 인쇄 뒤에 글과 그림 부착을 시작합니다.");
   });
 });

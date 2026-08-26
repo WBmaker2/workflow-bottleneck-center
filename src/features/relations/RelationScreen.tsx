@@ -76,7 +76,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
           <ul>{messages.map((message) => <li key={message}>{message}</li>)}</ul>
         </section>
       )}
-      {validation.unnecessary.length > 0 && (
+      {validation.status === "valid-with-extra" && (
         <p className="relation-extra-feedback">학생이 추가한 관계는 안전하지만 기다림이 늘어날 수 있습니다. 필요하다면 삭제하고 흐름을 비교해 보세요.</p>
       )}
       <button type="button" onClick={continueToSchedule}>관계 확인</button>
