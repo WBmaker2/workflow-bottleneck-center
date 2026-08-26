@@ -121,9 +121,11 @@ const validSavedStage = (saved: PersistedMissionAttempt, scenario: ScenarioDefin
   if (index >= 2 && (relation.missingRequired.length > 0 || relation.cycleTaskIds.length > 0 || relation.unknown.length > 0 || relation.duplicate.length > 0)) return false;
   if (index >= 3 && !isScheduleReady(scenario, draft)) return false;
   const initial = index >= 4 || saved.selectedFindingId !== null ? snapshotFor(scenario, draft) : null;
-  if (index >= 4 && (!initial || saved.prediction === null)) return false;
-  if (saved.selectedFindingId !== null && (!initial || !initial.bottlenecks.findings.some(({ id }) => id === saved.selectedFindingId))) return false;
-  if (index >= 5 && saved.selectedFindingId === null) return false;
+  if (index >= 4 && !initial) return false;
+  if (initial && (initial.result.waits.length === 0 ? saved.prediction !== null : saved.prediction === null)) return false;
+  const findings = initial?.bottlenecks.findings ?? [];
+  if (saved.selectedFindingId !== null && (!initial || !findings.some(({ id }) => id === saved.selectedFindingId))) return false;
+  if (findings.length === 0 ? saved.selectedFindingId !== null : index >= 5 && saved.selectedFindingId === null) return false;
   if (index >= 6 && saved.revisedSchedule === null) return false;
   return true;
 };
@@ -145,8 +147,11 @@ export function rehydrateProgress(progress: AppProgressV1): AppState {
     const scheduleValid = relationValid && isScheduleReady(scenario, draftSchedule);
     const findingValid = saved.selectedFindingId === null || Boolean(initialSnapshot?.bottlenecks.findings.some(({ id }) => id === saved.selectedFindingId));
     const reachable = scheduleValid ? 3 : relationValid ? 2 : saved.conditionsAcknowledged ? 1 : 0;
-    const withAnalysis = initialSnapshot && saved.prediction !== null ? 4 : reachable;
-    const withRevision = withAnalysis >= 4 && findingValid && saved.selectedFindingId !== null ? 5 : withAnalysis;
+    const noWait = Boolean(initialSnapshot && initialSnapshot.result.waits.length === 0 && initialSnapshot.bottlenecks.findings.length === 0);
+    const predictionValid = initialSnapshot ? noWait ? saved.prediction === null : saved.prediction !== null : false;
+    const withAnalysis = initialSnapshot && predictionValid ? 4 : reachable;
+    const revisionReady = noWait ? saved.selectedFindingId === null : findingValid && saved.selectedFindingId !== null;
+    const withRevision = withAnalysis >= 4 && revisionReady ? 5 : withAnalysis;
     const withReport = withRevision >= 5 && revisedSnapshot && comparison ? 6 : withRevision;
     const stage = ["briefing", "relations", "schedule", "simulation", "analysis", "revision", "report"][Math.min(requestedStage, withReport)] as MissionAttempt["stage"];
     const safeComplete = Boolean(saved.completed && revisedSnapshot && comparison && Object.values(saved.evidence).every((value) => value.trim()) && revisedSnapshot.evaluation.metrics.safetyMet && revisedSnapshot.evaluation.metrics.qualityMet && !revisedSnapshot.evaluation.violations.some(({ kind }) => kind === "safety" || kind === "quality"));

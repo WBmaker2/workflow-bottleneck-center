@@ -52,7 +52,7 @@ describe("learning-state reducer", () => {
   });
 
   it("preserves the initial snapshot when revision begins", () => {
-    const initialSnapshot = snapshot();
+    const initialSnapshot = snapshot({ bottlenecks: { criticalTaskIds: ["verify-content"], findings: [{ id: "bottleneck-1", type: "dependency-path", blockedTaskId: "verify-content", blockerLabel: "앞 작업", delayUnits: 1, affectedTaskIds: [], explanation: "앞 작업을 기다렸습니다." }], totalWaitUnits: 1 } });
     const state = withAttempt((attempt) => ({
       ...attempt,
       stage: "analysis",
@@ -125,6 +125,29 @@ describe("learning-state reducer", () => {
     expect(next.attempts["science-display"]!.revisedSchedule).not.toBe(analysis.draftSchedule);
   });
 
+  it("requires an initial snapshot and a current finding before beginning revision", () => {
+    const base = createInitialState();
+    const current = base.attempts["science-display"]!;
+    const missingSnapshot = { ...current, stage: "analysis" as const, selectedFindingId: "bottleneck-1" };
+    const rejected = appReducer({ ...base, attempts: { ...base.attempts, "science-display": missingSnapshot } }, { type: "BEGIN_REVISION" });
+    expect(rejected.attempts["science-display"]!.stage).toBe("analysis");
+    expect(rejected.attempts["science-display"]!.revisedSchedule).toBeNull();
+    const analyzed = { ...current, stage: "analysis" as const, initialSnapshot: snapshot({ bottlenecks: { criticalTaskIds: ["task"], findings: [{ id: "current", type: "dependency-path", blockedTaskId: "task", blockerLabel: "앞 작업", delayUnits: 1, affectedTaskIds: [], explanation: "앞 작업을 기다렸습니다." }], totalWaitUnits: 1 } }) };
+    const stale = { ...base, attempts: { ...base.attempts, "science-display": { ...analyzed, selectedFindingId: "old-finding" } } };
+    expect(appReducer(stale, { type: "BEGIN_REVISION" }).attempts["science-display"]!.stage).toBe("analysis");
+    const valid = { ...base, attempts: { ...base.attempts, "science-display": { ...analyzed, selectedFindingId: "current" } } };
+    expect(appReducer(valid, { type: "BEGIN_REVISION" }).attempts["science-display"]!.stage).toBe("revision");
+  });
+
+  it("rejects a stale revised snapshot without changing state or announcement", () => {
+    const base = createInitialState();
+    const revised = { entries: [{ taskId: "verify-content", plannedStart: 0, roleIds: ["A"] as const }], learnerEdges: [] };
+    const attempt = { ...base.attempts["science-display"]!, stage: "revision" as const, revisedSchedule: revised, initialSnapshot: snapshot({ bottlenecks: { criticalTaskIds: ["verify-content"], findings: [{ id: "bottleneck-1", type: "dependency-path", blockedTaskId: "verify-content", blockerLabel: "앞 작업", delayUnits: 1, affectedTaskIds: [], explanation: "앞 작업을 기다렸습니다." }], totalWaitUnits: 1 } }), selectedFindingId: "bottleneck-1" };
+    const state = { ...base, announcement: "기존 안내", attempts: { ...base.attempts, "science-display": attempt } };
+    const stale = appReducer(state, { type: "SAVE_REVISED_SNAPSHOT", snapshot: snapshot(), comparison: { finishDelta: 0, waitDelta: 0, changedTaskIds: [], preserved: { safety: true, quality: true, fairness: true }, summary: "" } });
+    expect(stale).toBe(state);
+  });
+
   it("does not mutate an earlier attempt or its snapshot", () => {
     const state = withAttempt((attempt) => ({ ...attempt, stage: "simulation" }));
     const next = appReducer(state, { type: "SAVE_INITIAL_SNAPSHOT", snapshot: snapshot({ draft: { entries: [], learnerEdges: [] } }) });
@@ -161,8 +184,9 @@ describe("learning-state reducer", () => {
       ...base,
       stage: "report" as const,
       revisedSchedule: revised,
+      initialSnapshot: snapshot({ bottlenecks: { criticalTaskIds: ["verify-content"], findings: [{ id: "bottleneck-1", type: "dependency-path", blockedTaskId: "verify-content", blockerLabel: "앞 작업", delayUnits: 1, affectedTaskIds: [], explanation: "앞 작업을 기다렸습니다." }], totalWaitUnits: 1 } }),
       selectedFindingId: "bottleneck-1",
-      revisedSnapshot: snapshot(),
+      revisedSnapshot: snapshot({ bottlenecks: { criticalTaskIds: ["verify-content"], findings: [{ id: "bottleneck-1", type: "dependency-path", blockedTaskId: "verify-content", blockerLabel: "앞 작업", delayUnits: 1, affectedTaskIds: [], explanation: "앞 작업을 기다렸습니다." }], totalWaitUnits: 1 } }),
       comparison: { finishDelta: 0, waitDelta: 0, changedTaskIds: [], preserved: { safety: true, quality: true, fairness: true }, summary: "완료" },
       evidence: { dependencyExplanation: "a", parallelExplanation: "b", bottleneckExplanation: "c", tradeoffExplanation: "d" },
       completed: true,

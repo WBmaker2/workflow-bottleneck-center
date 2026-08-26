@@ -2,7 +2,7 @@ import { scenarioCatalog } from "../data/scenarios";
 import { getScenario } from "../data/scenarios";
 import type { LearningStage, ScheduleDraft, ScenarioId } from "../domain/types";
 import { normalizeScheduleRoleIds } from "../domain/scheduleBounds";
-import { canEnterStage, isScheduleReady } from "./appSelectors";
+import { canBeginRevision, canEnterStage, isScheduleReady } from "./appSelectors";
 import type { AppAction, AppState, AttemptSnapshot, LearningEvidence, MissionAttempt } from "./appTypes";
 
 const emptyEvidence: LearningEvidence = {
@@ -125,14 +125,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (attempt.stage !== "analysis" || !(attempt.initialSnapshot?.bottlenecks.findings ?? []).some(({ id }) => id === action.findingId)) return invalid(state, "먼저 분석 결과에 표시된 병목 원인을 선택하세요.");
       return withAttempt(state, Object.freeze({ ...attempt, selectedFindingId: action.findingId, completed: false }));
     case "BEGIN_REVISION":
-      if (attempt.stage !== "analysis" || (!attempt.selectedFindingId && (attempt.initialSnapshot?.bottlenecks.findings.length ?? 0) > 0)) return invalid(state, "먼저 병목 원인을 선택하세요.");
+      if (attempt.stage !== "analysis" || !canBeginRevision(attempt)) return invalid(state, "먼저 병목 원인을 선택하세요.");
       return withAttempt(state, Object.freeze({ ...attempt, stage: "revision", revisedSchedule: freezeDraft(attempt.scenarioId, attempt.draftSchedule), revisedSnapshot: null, comparison: null, completed: false }));
     case "SET_REVISED_SCHEDULE":
       if (attempt.stage !== "revision") return invalid(state, "수정 단계에서 새 일정을 배치하세요.");
       return withAttempt(state, Object.freeze({ ...attempt, revisedSchedule: freezeDraft(attempt.scenarioId, action.draft), revisedSnapshot: null, comparison: null, completed: false }));
     case "SAVE_REVISED_SNAPSHOT":
-      if (attempt.stage !== "revision" || !attempt.revisedSchedule || (!attempt.selectedFindingId && (attempt.initialSnapshot?.bottlenecks.findings.length ?? 0) > 0)) return invalid(state, "먼저 수정 일정을 준비하세요.");
-      return withAttempt(state, Object.freeze({ ...attempt, revisedSnapshot: freezeSnapshot(attempt.scenarioId, action.snapshot), comparison: cloneFreeze(action.comparison), completed: false }));
+      if (attempt.stage !== "revision" || !attempt.revisedSchedule || !canBeginRevision(attempt)) return invalid(state, "먼저 수정 일정을 준비하세요.");
+      if (!action.snapshot?.draft || !sameDraft(canonicalDraft(attempt.scenarioId, action.snapshot.draft), canonicalDraft(attempt.scenarioId, attempt.revisedSchedule))) return state;
+      return withAttempt(state, Object.freeze({ ...attempt, revisedSnapshot: freezeSnapshot(attempt.scenarioId, { ...action.snapshot, draft: canonicalDraft(attempt.scenarioId, action.snapshot.draft) }), comparison: cloneFreeze(action.comparison), completed: false }));
     case "SET_EVIDENCE_FIELD":
       if (attempt.stage !== "report") return invalid(state, "보고서 단계에서 근거를 작성하세요.");
       if (!(action.field in emptyEvidence)) return invalid(state, "알 수 없는 근거 항목입니다.");

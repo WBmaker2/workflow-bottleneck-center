@@ -35,16 +35,27 @@ export function compareAttempts(
     fairness: initial.metrics.fairnessMet && revised.metrics.fairnessMet,
   };
   const lost = [
-    !preserved.safety ? "안전 조건" : "",
-    !preserved.quality ? "품질 조건" : "",
-    !preserved.fairness ? "역할 공정성" : "",
+    !revised.metrics.safetyMet ? "안전 조건" : "",
+    !revised.metrics.qualityMet ? "품질 조건" : "",
   ].filter(Boolean);
-  const prefix = lost.length > 0 ? `${lost.join(", ")}을 유지하지 못했습니다. ` : "안전·품질·역할 공정성을 유지했습니다. ";
+  const fairnessSummary = initial.metrics.fairnessMet && revised.metrics.fairnessMet
+    ? "역할 공정성을 유지했습니다."
+    : initial.metrics.fairnessMet && !revised.metrics.fairnessMet
+      ? "역할 공정성을 유지하지 못했습니다."
+      : !initial.metrics.fairnessMet && revised.metrics.fairnessMet
+        ? "역할 공정성이 개선되었습니다."
+        : "역할 공정성 조건이 아직 충족되지 않았습니다.";
+  const prefix = lost.length > 0 ? `${lost.join(", ")}을 유지하지 못했습니다. ` : "";
+  const conditionSummary = initial.metrics.safetyMet && revised.metrics.safetyMet
+    && initial.metrics.qualityMet && revised.metrics.qualityMet
+    && initial.metrics.fairnessMet && revised.metrics.fairnessMet
+    ? "안전·품질·역할 공정성을 유지했습니다."
+    : fairnessSummary;
   return {
     finishDelta,
     waitDelta,
     changedTaskIds: Object.freeze(changedTaskIds),
     preserved,
-    summary: `${prefix}전체 시간 ${quantityChange(finishDelta, "시간")}, 대기 ${quantityChange(waitDelta, "대기단위")}입니다.`,
+    summary: `${prefix}${conditionSummary} 전체 시간 ${quantityChange(finishDelta, "시간")}, 대기 ${quantityChange(waitDelta, "대기단위")}입니다.`,
   };
 }

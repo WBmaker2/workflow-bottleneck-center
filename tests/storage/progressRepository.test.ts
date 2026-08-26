@@ -9,6 +9,23 @@ import { createMemoryProgressRepository } from "../../src/storage/progressReposi
 import { requiredEdgesFromScenario } from "../../src/domain/scenarioValidation";
 import { getScenario } from "../../src/data/scenarios";
 
+const noWaitScienceDraft = () => {
+  const scenario = getScenario("science-display");
+  const starts: Record<string, number> = {
+    "verify-content": 0,
+    "prepare-print-file": 2,
+    "prepare-illustrations": 2,
+    "print-text": 4,
+    "attach-materials": 6,
+    "final-review": 8,
+  };
+  const roles = ["A", "B", "C"] as const;
+  return {
+    learnerEdges: requiredEdgesFromScenario(scenario),
+    entries: scenario.tasks.map((task, index) => ({ taskId: task.id, plannedStart: starts[task.id]!, roleIds: task.peopleRequired === 1 ? [roles[index % roles.length]!] : ["A", "B"] as const })),
+  };
+};
+
 const mockStorage = (): Storage => ({
   getItem: vi.fn(() => null),
   setItem: vi.fn(),
@@ -115,6 +132,33 @@ describe("versioned local progress", () => {
     const edges = requiredEdgesFromScenario(getScenario("science-display"));
     const revision = { ...science, stage: "revision" as const, conditionsAcknowledged: true, relationEdges: edges, draftSchedule: { entries: [], learnerEdges: edges }, prediction: "dependency" as const, selectedFindingId: "missing-finding" };
     expect(decodeProgress(JSON.stringify({ ...progress, attempts: { ...progress.attempts, "science-display": revision } }))).toBeNull();
+  });
+
+  it("round-trips no-wait analysis through revision and report with null finding evidence", () => {
+    const progress = encodeProgress({ ...createInitialState(), saveEnabled: true });
+    const science = progress.attempts["science-display"];
+    const draft = noWaitScienceDraft();
+    const saved = { ...science, stage: "report" as const, conditionsAcknowledged: true, relationEdges: draft.learnerEdges, draftSchedule: draft, prediction: null, predictionExplanation: "", selectedFindingId: null, revisedSchedule: draft };
+    const decoded = decodeProgress(JSON.stringify({ ...progress, attempts: { ...progress.attempts, "science-display": saved } }));
+    expect(decoded).not.toBeNull();
+    const restored = rehydrateProgress(decoded!);
+    const attempt = restored.attempts["science-display"]!;
+    expect(attempt.stage).toBe("report");
+    expect(attempt.initialSnapshot?.result.waits).toHaveLength(0);
+    expect(attempt.initialSnapshot?.bottlenecks.findings).toHaveLength(0);
+    expect(attempt.prediction).toBeNull();
+    expect(attempt.selectedFindingId).toBeNull();
+    expect(attempt.revisedSnapshot).not.toBeNull();
+    expect(attempt.comparison).not.toBeNull();
+  });
+
+  it("rejects null prediction when a recomputed schedule has waits", () => {
+    const progress = encodeProgress({ ...createInitialState(), saveEnabled: true });
+    const science = progress.attempts["science-display"];
+    const scenario = getScenario("science-display");
+    const draft = { learnerEdges: requiredEdgesFromScenario(scenario), entries: scenario.tasks.map((task) => ({ taskId: task.id, plannedStart: 0, roleIds: scenario.roles.slice(0, task.peopleRequired).map(({ id }) => id) })) };
+    const saved = { ...science, stage: "analysis" as const, conditionsAcknowledged: true, relationEdges: draft.learnerEdges, draftSchedule: draft, prediction: null, predictionExplanation: "", selectedFindingId: null };
+    expect(decodeProgress(JSON.stringify({ ...progress, attempts: { ...progress.attempts, "science-display": saved } }))).toBeNull();
   });
 
   it("announces a clear failure once per enable-to-disable transition", async () => {

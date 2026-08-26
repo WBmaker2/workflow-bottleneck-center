@@ -14,6 +14,13 @@ const relationReady = (attempt: MissionAttempt): boolean => {
     && validation.duplicate.length === 0;
 };
 
+export const canBeginRevision = (attempt: MissionAttempt): boolean => {
+  const findings = attempt.initialSnapshot?.bottlenecks.findings ?? [];
+  if (!attempt.initialSnapshot) return false;
+  if (findings.length === 0) return attempt.selectedFindingId === null;
+  return attempt.selectedFindingId !== null && findings.some(({ id }) => id === attempt.selectedFindingId);
+};
+
 export const isScheduleReady = (scenario: ReturnType<typeof getScenario>, draft: MissionAttempt["draftSchedule"]): boolean => {
   if (!draft || typeof draft !== "object") return false;
   if (!Array.isArray(draft.entries) || !Array.isArray(draft.learnerEdges)) return false;
@@ -46,7 +53,7 @@ export function canEnterStage(attempt: MissionAttempt, stage: LearningStage): bo
     case "schedule": return relationReady(attempt);
     case "simulation": return isScheduleReady(getScenario(attempt.scenarioId), attempt.draftSchedule);
     case "analysis": return attempt.initialSnapshot !== null && (attempt.prediction !== null || attempt.initialSnapshot.result.waits.length === 0);
-    case "revision": return attempt.selectedFindingId !== null || (attempt.initialSnapshot !== null && attempt.initialSnapshot.bottlenecks.findings.length === 0);
+    case "revision": return canBeginRevision(attempt);
     case "report": return attempt.revisedSnapshot !== null && attempt.comparison !== null;
     default: return false;
   }

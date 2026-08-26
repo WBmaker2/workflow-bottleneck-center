@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "vitest-axe";
@@ -8,6 +9,7 @@ import { RevisionScreen } from "../../src/features/revision/RevisionScreen";
 import { getScenario } from "../../src/data/scenarios";
 import type { AttemptSnapshot } from "../../src/app/appTypes";
 import type { ScheduleDraft } from "../../src/domain/types";
+import { BottleneckPanel } from "../../src/features/analysis/BottleneckPanel";
 
 expect.extend(axeMatchers);
 
@@ -82,6 +84,33 @@ describe("analysis and revision learning flow", () => {
     await user.click(screen.getByRole("button", { name: "수정 시작" }));
     expect(onBeginRevision).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: "수정 시작" })).not.toHaveAttribute("data-pulse", "true");
+  });
+
+  it("requires re-marking after a pending finding changes and shows that finding evidence", async () => {
+    const user = userEvent.setup();
+    const findings = [
+      snapshot().bottlenecks.findings[0]!,
+      { ...snapshot().bottlenecks.findings[0]!, id: "bottleneck-2", blockerLabel: "역할 B", delayUnits: 3, explanation: "역할 B를 기다려 그림 배치 준비가 3단위 늦어졌습니다.", affectedTaskIds: ["final-review"] },
+    ];
+    function Harness() {
+      const [selected, setSelected] = useState<string | null>(null);
+      return <AnalysisScreen scenario={scenario} snapshot={snapshot({ bottlenecks: { criticalTaskIds: ["print-text"], findings, totalWaitUnits: 5 } })} prediction="resource" predictionExplanation="공유 도구를 기다렸습니다." selectedFindingId={selected} onSelect={setSelected} onBeginRevision={() => undefined} />;
+    }
+    render(<Harness />);
+    await user.click(screen.getByRole("radio", { name: /프린터를 2단위 기다림/ }));
+    await user.click(screen.getByRole("button", { name: "병목 표시" }));
+    expect(screen.getByRole("button", { name: "수정 시작" })).toBeVisible();
+    await user.click(screen.getByRole("radio", { name: /역할 B를 3단위 기다림/ }));
+    expect(screen.queryByRole("button", { name: "수정 시작" })).not.toBeInTheDocument();
+    expect(screen.getByText(/역할 B를 기다려 그림 배치 준비가 3단위 늦어졌습니다/)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "병목 표시" }));
+    expect(screen.getByRole("button", { name: "수정 시작" })).toBeVisible();
+  });
+
+  it("uses scenario task titles instead of kebab-case IDs", () => {
+    render(<BottleneckPanel scenario={scenario} analysis={snapshot().bottlenecks} selectedFindingId={null} onSelect={() => undefined} />);
+    expect(screen.queryByText("print-text")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/글 인쇄/).length).toBeGreaterThan(0);
   });
 
   it("shows all comparison rows and leads with lost safety/quality conditions", () => {
