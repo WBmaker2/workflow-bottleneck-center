@@ -6,6 +6,8 @@ import { UpdateHistoryButton } from "./components/UpdateHistoryButton";
 import { RelationScreen } from "./features/relations/RelationScreen";
 import { ScheduleScreen } from "./features/schedule/ScheduleScreen";
 import { SimulationScreen } from "./features/simulation/SimulationScreen";
+import { AnalysisScreen } from "./features/analysis/AnalysisScreen";
+import { RevisionScreen } from "./features/revision/RevisionScreen";
 
 const stageLabels = {
   briefing: "안내",
@@ -75,6 +77,27 @@ function AppShell() {
             predictionExplanation={attempt.predictionExplanation}
             onSubmit={(reason, explanation) => dispatch({ type: "SET_PREDICTION", reason, explanation })}
             onEnterAnalysis={() => dispatch({ type: "ENTER_STAGE", stage: "analysis" })}
+          />
+        ) : attempt.stage === "analysis" && attempt.initialSnapshot ? (
+          <AnalysisScreen
+            scenario={scenario}
+            snapshot={attempt.initialSnapshot}
+            prediction={attempt.prediction}
+            predictionExplanation={attempt.predictionExplanation}
+            selectedFindingId={attempt.selectedFindingId}
+            onSelect={(findingId) => dispatch({ type: "SELECT_BOTTLENECK", findingId })}
+            onBeginRevision={() => dispatch({ type: "BEGIN_REVISION" })}
+          />
+        ) : attempt.stage === "revision" && attempt.initialSnapshot ? (
+          <RevisionScreen
+            scenario={scenario}
+            initialSnapshot={attempt.initialSnapshot}
+            revisedSchedule={attempt.revisedSchedule}
+            revisedSnapshot={attempt.revisedSnapshot}
+            comparison={attempt.comparison}
+            onChange={(draft) => dispatch({ type: "SET_REVISED_SCHEDULE", draft })}
+            onCompare={(snapshot, comparison) => dispatch({ type: "SAVE_REVISED_SNAPSHOT", snapshot, comparison })}
+            onReport={() => dispatch({ type: "ENTER_STAGE", stage: "report" })}
           />
         ) : (
           <section aria-labelledby="next-stage-title">

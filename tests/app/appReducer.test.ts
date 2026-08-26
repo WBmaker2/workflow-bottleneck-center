@@ -112,6 +112,19 @@ describe("learning-state reducer", () => {
     expect(canEnterStage({ ...attempt, stage: "simulation", initialSnapshot: snapshot({ result: { runs: [], waits: [{ taskId: "task", from: 0, to: 1, reason: "dependency" }], finishTime: 1, omittedTaskIds: [], blockedTaskIds: [], issues: [] } }) }, "analysis")).toBe(false);
   });
 
+  it("allows a zero-wait analysis to begin revision without inventing a bottleneck", () => {
+    const base = createInitialState();
+    const current = base.attempts["science-display"]!;
+    const noWait = snapshot({ result: { runs: [], waits: [], finishTime: 0, omittedTaskIds: [], blockedTaskIds: [], issues: [] } });
+    const analysis = { ...current, stage: "analysis" as const, initialSnapshot: noWait, selectedFindingId: null };
+    expect(getRequiredAction(analysis)).toBe(null);
+    expect(canEnterStage(analysis, "revision")).toBe(true);
+    const next = appReducer({ ...base, attempts: { ...base.attempts, "science-display": analysis } }, { type: "BEGIN_REVISION" });
+    expect(next.attempts["science-display"]!.stage).toBe("revision");
+    expect(next.attempts["science-display"]!.selectedFindingId).toBeNull();
+    expect(next.attempts["science-display"]!.revisedSchedule).not.toBe(analysis.draftSchedule);
+  });
+
   it("does not mutate an earlier attempt or its snapshot", () => {
     const state = withAttempt((attempt) => ({ ...attempt, stage: "simulation" }));
     const next = appReducer(state, { type: "SAVE_INITIAL_SNAPSHOT", snapshot: snapshot({ draft: { entries: [], learnerEdges: [] } }) });

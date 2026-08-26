@@ -46,7 +46,7 @@ export function canEnterStage(attempt: MissionAttempt, stage: LearningStage): bo
     case "schedule": return relationReady(attempt);
     case "simulation": return isScheduleReady(getScenario(attempt.scenarioId), attempt.draftSchedule);
     case "analysis": return attempt.initialSnapshot !== null && (attempt.prediction !== null || attempt.initialSnapshot.result.waits.length === 0);
-    case "revision": return attempt.selectedFindingId !== null;
+    case "revision": return attempt.selectedFindingId !== null || (attempt.initialSnapshot !== null && attempt.initialSnapshot.bottlenecks.findings.length === 0);
     case "report": return attempt.revisedSnapshot !== null && attempt.comparison !== null;
     default: return false;
   }
@@ -56,7 +56,7 @@ export function getRequiredAction(attempt: MissionAttempt): "confirm-conditions"
   switch (attempt.stage) {
     case "briefing": return "confirm-conditions";
     case "schedule": return "run-simulation";
-    case "analysis": return "mark-bottleneck";
+    case "analysis": return attempt.initialSnapshot === null || attempt.initialSnapshot.bottlenecks.findings.length > 0 ? "mark-bottleneck" : null;
     case "revision": return "compare-revision";
     default: return null;
   }
