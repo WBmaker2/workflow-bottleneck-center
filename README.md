@@ -108,4 +108,6 @@ npm run verify
 
 이 프로젝트에는 **서버, 로그인, 외부 AI, 실제 일정 통합, 온라인 협업, 학습자 순위, 학생 이름 수집**이 없습니다. 정적 앱과 선택형 기기 로컬 저장만 사용합니다.
 
-현재 계획에는 배포가 포함되지 않습니다. 따라서 이 작업에서는 GitHub push, 호스팅 배포, 공개 URL 검증을 수행하지 않습니다. 배포가 별도로 승인되면 먼저 실제 학습자 경로와 배포 결과를 검증해야 합니다.
+## GitHub Pages 배포
+
+`.github/workflows/deploy-pages.yml` 워크플로는 `main` 브랜치 push 또는 수동 실행 시 `npm ci`, `npm run verify`, 프로덕션 빌드를 수행한 뒤 GitHub Pages에 배포하도록 구성되어 있습니다. 예상 프로젝트 주소는 <https://wbmaker2.github.io/workflow-bottleneck-center/>입니다. 이 문서는 배포 구성을 설명하며, 실제 배포 완료·공개 URL 응답·학습자 경로 검증을 아직 주장하지 않습니다.
