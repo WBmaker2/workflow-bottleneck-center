@@ -234,4 +234,22 @@ describe("learning-state reducer", () => {
     const completed = appReducer(state, { type: "COMPLETE_MISSION" });
     expect(completed.attempts["science-display"]!.completed).toBe(true);
   });
+
+  it("rejects report entry and completion when the revised evaluation is not successful", () => {
+    const base = createInitialState().attempts["science-display"]!;
+    const failed = snapshot({ evaluation: { ...snapshot().evaluation, status: "revise", metrics: { ...snapshot().evaluation.metrics, timeGoalMet: false } } });
+    const attempt = {
+      ...base,
+      stage: "revision" as const,
+      initialSnapshot: snapshot(),
+      revisedSchedule: emptyDraft,
+      revisedSnapshot: failed,
+      comparison: { finishDelta: 0, waitDelta: 0, changedTaskIds: [], preserved: { safety: true, quality: true, fairness: true }, summary: "" },
+      evidence: { dependencyExplanation: "선행 관계를 충분히 설명한 문장입니다.", parallelExplanation: "병렬 관계를 충분히 설명한 문장입니다.", bottleneckExplanation: "표시된 병목이 없다는 사실을 설명합니다.", tradeoffExplanation: "안전 품질 역할 공정성을 함께 지킨 절충입니다." },
+    };
+    expect(canEnterStage({ ...attempt, stage: "revision" }, "report")).toBe(false);
+    const rejected = appReducer({ ...createInitialState(), attempts: { ...createInitialState().attempts, "science-display": { ...attempt, stage: "report" } } }, { type: "COMPLETE_MISSION" });
+    expect(rejected.attempts["science-display"]!.completed).toBe(false);
+    expect(rejected.announcement).toContain("목표 시간");
+  });
 });

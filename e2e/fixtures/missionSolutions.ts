@@ -221,57 +221,58 @@ const placeEntries = async (page: Page, scenarioId: ScenarioId, entries: readonl
   if (entries.length !== scenario.tasks.length) throw new Error(`${scenarioId} does not place every task`);
 };
 
-const firstParallelPair = (scenarioId: ScenarioId): readonly [string, string] => {
-  const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;
-  const reachable = (from: string, target: string, seen = new Set<string>()): boolean => {
-    if (from === target) return true;
-    if (seen.has(from)) return false;
-    seen.add(from);
-    return scenario.tasks.find((task) => task.id === from)?.unlocks.some((next) => reachable(next, target, seen)) ?? false;
-  };
-  for (const first of scenario.tasks) for (const second of scenario.tasks) {
-    if (first.id !== second.id && !reachable(first.id, second.id) && !reachable(second.id, first.id)) return [first.id, second.id];
-  }
-  throw new Error(`${scenarioId} has no independent task pair`);
-};
-
 const fillEvidence = async (page: Page, scenarioId: ScenarioId): Promise<void> => {
   const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;
   const solution = missionSolutions[scenarioId];
-  const firstRequired = requiredEdgesFromScenario(scenario)[0]!;
-  const [parallelFirst, parallelSecond] = firstParallelPair(scenarioId);
-  await chooseSelectValue(page, "선행 작업 선택", firstRequired.beforeTaskId);
-  await chooseSelectValue(page, "시작 작업 선택", firstRequired.afterTaskId);
+  const taskIdForTitle = (title: string): string => scenario.tasks.find((task) => task.title === title)?.id ?? (() => { throw new Error(`Unknown task title: ${title}`); })();
+  const dependencyTitles = scenario.tasks.filter((task) => solution.evidence.dependencyExplanation.includes(task.title));
+  const parallelTitles = scenario.tasks.filter((task) => solution.evidence.parallelExplanation.includes(task.title));
+  const bottleneckMatch = solution.evidence.bottleneckExplanation.match(/^(.+?) 때문에 (.+?) 작업이 (\d+)단위 기다렸습니다/);
+  if (dependencyTitles.length < 2 || parallelTitles.length < 2 || !bottleneckMatch) throw new Error(`Evidence contract could not be parsed for ${scenarioId}`);
+  const dependencyBefore = dependencyTitles[0]!.id;
+  const dependencyAfter = dependencyTitles[dependencyTitles.length - 1]!.id;
+  const parallelFirst = parallelTitles[0]!.id;
+  const parallelSecond = parallelTitles[parallelTitles.length - 1]!.id;
+  const expectedBlocker = bottleneckMatch[1]!;
+  const expectedBlockedTask = taskIdForTitle(bottleneckMatch[2]!);
+  const expectedUnits = Number(bottleneckMatch[3]);
+  await chooseSelectValue(page, "선행 작업 선택", dependencyBefore);
+  await chooseSelectValue(page, "시작 작업 선택", dependencyAfter);
   await chooseSelectValue(page, "선행 이유 선택", "앞 작업의 결과가 필요해서");
   const dependencyText = page.getByLabel("선행 관계 설명");
   await dependencyText.focus();
-  await page.keyboard.type("앞 작업의 결과를 확인하기 위해서");
+  await page.keyboard.type(solution.evidence.dependencyExplanation);
   await chooseSelectValue(page, "함께 할 첫 작업", parallelFirst);
   await chooseSelectValue(page, "함께 할 둘째 작업", parallelSecond);
   await chooseSelectValue(page, "병렬 이유 선택", "서로 다른 역할로 진행할 수 있어서");
   const parallelText = page.getByLabel("병렬 관계 설명");
   await parallelText.focus();
-  await page.keyboard.type("서로 기다리지 않고 준비할 수 있습니다");
+  await page.keyboard.type(solution.evidence.parallelExplanation);
   const findingSelect = page.getByLabel("병목 원인 선택");
-  const findingId = await findingSelect.locator("option").nth(1).getAttribute("value");
-  if (!findingId) throw new Error("A bottleneck must be selected before writing evidence");
+  const findingId = await findingSelect.locator("option").evaluateAll((options, expected) => options
+    .map((option) => ({ value: (option as HTMLOptionElement).value, label: option.textContent ?? "" }))
+    .find(({ label }) => {
+      const [blocker, blocked] = label.split(" · ");
+      return Boolean(blocker && blocked && (blocker === expected.blocker || expected.blocker.startsWith(blocker)) && blocked === expected.blocked);
+    })?.value ?? "", { blocker: expectedBlocker, blocked: scenario.tasks.find((task) => task.id === expectedBlockedTask)?.title ?? expectedBlockedTask });
+  if (!findingId) throw new Error(`Expected bottleneck ${expectedBlocker} -> ${expectedBlockedTask} is missing in ${scenarioId}`);
   await chooseSelectValue(page, "병목 원인 선택", findingId);
-  const waitText = await page.locator(".evidence-form p").filter({ hasText: "표시된 실제 지연" }).textContent().catch(() => null);
-  const displayedUnits = waitText?.match(/(\d+)단위/)?.[1] ?? "1";
-  await chooseSelectValue(page, "기다림 단위 선택", displayedUnits);
+  await chooseSelectValue(page, "기다림 단위 선택", String(expectedUnits));
+  await expect(findingSelect).toHaveValue(findingId);
+  await expect(page.getByLabel("기다림 단위 선택")).toHaveValue(String(expectedUnits));
   const bottleneckText = page.getByLabel("병목 근거 설명");
   await bottleneckText.focus();
-  await page.keyboard.type("실행 기록에서 확인한 기다림입니다");
+  await page.keyboard.type(solution.evidence.bottleneckExplanation);
   await chooseSelectValue(page, "바꾼 작업 선택", solution.revisedEntries[0]!.taskId);
   await chooseSelectValue(page, "수정 전략 선택", "순서 바꾸기");
   await chooseSelectValue(page, "시간/대기 변화 선택", "줄어들었");
   await chooseSelectValue(page, "조건 결과 선택", "지켰");
   const tradeoffText = page.getByLabel("절충 근거 설명");
   await tradeoffText.focus();
-  await page.keyboard.type("조건을 함께 살피며 조정했습니다");
+  await page.keyboard.type(solution.evidence.tradeoffExplanation);
 };
 
-export const completeMissionByKeyboard = async (page: Page, solution: MissionSolution): Promise<void> => {
+export const enterRevisionByKeyboard = async (page: Page, solution: MissionSolution): Promise<void> => {
   const scenario = scenarioCatalog.find(({ id }) => id === solution.scenarioId)!;
   const missionButton = page.getByRole("button", { name: scenario.title });
   await missionButton.focus();
@@ -296,6 +297,10 @@ export const completeMissionByKeyboard = async (page: Page, solution: MissionSol
   await page.keyboard.press("Space");
   await pressButton(page, "병목 표시");
   await pressButton(page, "수정 시작");
+};
+
+export const completeMissionByKeyboard = async (page: Page, solution: MissionSolution): Promise<void> => {
+  await enterRevisionByKeyboard(page, solution);
   await placeEntries(page, solution.scenarioId, solution.revisedEntries);
   await pressButton(page, "수정안 실행·비교");
   await pressButton(page, "보고서 작성");

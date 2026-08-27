@@ -5,6 +5,7 @@ import { normalizeScheduleRoleIds } from "../domain/scheduleBounds";
 import { canBeginRevision, canEnterStage, isScheduleReady } from "./appSelectors";
 import type { AppAction, AppState, AttemptSnapshot, LearningEvidence, MissionAttempt } from "./appTypes";
 import { isEvidenceComplete } from "../domain/teacherSummary";
+import { isSuccessfulEvaluation } from "../domain/evaluator";
 
 const emptyEvidence: LearningEvidence = {
   dependencyExplanation: "",
@@ -142,8 +143,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "COMPLETE_MISSION": {
       const evidenceReady = isEvidenceComplete(attempt.evidence);
       const evaluation = attempt.revisedSnapshot?.evaluation;
-      const safe = Boolean(evaluation && evaluation.metrics.safetyMet && evaluation.metrics.qualityMet && !evaluation.violations.some(({ kind }) => kind === "safety" || kind === "quality"));
-      if (attempt.stage !== "report" || !attempt.revisedSnapshot || !attempt.comparison || !evidenceReady || !safe) return invalid(state, "수정 결과의 안전·품질 조건과 네 가지 근거를 모두 확인하세요.");
+      const successful = Boolean(evaluation && isSuccessfulEvaluation(evaluation));
+      if (attempt.stage !== "report" || !attempt.revisedSnapshot || !attempt.comparison || !evidenceReady || !successful) return invalid(state, "수정 결과의 안전·품질·역할 공정성·목표 시간과 네 가지 근거를 모두 확인하세요.");
       return withAttempt(state, Object.freeze({ ...attempt, completed: true }));
     }
     default:

@@ -2,6 +2,7 @@ import { getScenario } from "../data/scenarios";
 import { validateRelationMap } from "../domain/relationValidator";
 import { simulateSchedule } from "../domain/simulator";
 import { isScheduleStart } from "../domain/scheduleBounds";
+import { isSuccessfulEvaluation } from "../domain/evaluator";
 import type { LearningStage, MissionAttempt } from "./appTypes";
 
 const stages: readonly LearningStage[] = ["briefing", "relations", "schedule", "simulation", "analysis", "revision", "report"];
@@ -54,7 +55,9 @@ export function canEnterStage(attempt: MissionAttempt, stage: LearningStage): bo
     case "simulation": return isScheduleReady(getScenario(attempt.scenarioId), attempt.draftSchedule);
     case "analysis": return attempt.initialSnapshot !== null && (attempt.prediction !== null || attempt.initialSnapshot.result.waits.length === 0);
     case "revision": return canBeginRevision(attempt);
-    case "report": return attempt.revisedSnapshot !== null && attempt.comparison !== null;
+    case "report": return attempt.revisedSnapshot !== null
+      && attempt.comparison !== null
+      && isSuccessfulEvaluation(attempt.revisedSnapshot.evaluation);
     default: return false;
   }
 }

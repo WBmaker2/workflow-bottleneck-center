@@ -110,7 +110,7 @@ describe("analysis and revision learning flow", () => {
   it("can complete a hydrated no-wait report without creating a finding or wait", async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn();
-    const noWait = snapshot({ bottlenecks: { criticalTaskIds: [], findings: [], totalWaitUnits: 0 }, result: { ...snapshot().result, waits: [] } });
+    const noWait = snapshot({ bottlenecks: { criticalTaskIds: [], findings: [], totalWaitUnits: 0 }, result: { ...snapshot().result, waits: [] }, evaluation: { ...snapshot().evaluation, metrics: { ...snapshot().evaluation.metrics, timeGoalMet: true } } });
     const evidence = { dependencyExplanation: "선행 관계를 충분히 설명한 문장입니다.", parallelExplanation: "병렬 관계를 충분히 설명한 문장입니다.", bottleneckExplanation: "표시된 병목이 없다는 사실을 설명합니다.", tradeoffExplanation: "안전 품질 역할 공정성을 함께 지킨 절충입니다." };
     const attempt = { scenarioId: scenario.id, stage: "report", conditionsAcknowledged: true, relationEdges: [], draftSchedule: draft, initialSnapshot: noWait, prediction: null, predictionExplanation: "", selectedFindingId: null, revisedSchedule: draft, revisedSnapshot: noWait, comparison: { finishDelta: 0, waitDelta: 0, changedTaskIds: [], preserved: { safety: true, quality: true, fairness: true }, summary: "" }, evidence, completed: false } satisfies MissionAttempt;
     render(<ReportScreen scenario={scenario} attempt={attempt} onEvidenceChange={() => undefined} onComplete={onComplete} />);

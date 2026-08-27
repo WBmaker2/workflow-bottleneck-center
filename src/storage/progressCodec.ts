@@ -1,7 +1,7 @@
 import { scenarioCatalog } from "../data/scenarios";
 import { analyzeBottlenecks } from "../domain/bottleneckAnalyzer";
 import { compareAttempts } from "../domain/comparison";
-import { evaluateSchedule } from "../domain/evaluator";
+import { evaluateSchedule, isSuccessfulEvaluation } from "../domain/evaluator";
 import { simulateSchedule } from "../domain/simulator";
 import type { DependencyEdge, ScheduleDraft, ScenarioDefinition, ScenarioId } from "../domain/types";
 import { createInitialState } from "../app/appReducer";
@@ -9,6 +9,7 @@ import { isScheduleReady } from "../app/appSelectors";
 import { validateRelationMap } from "../domain/relationValidator";
 import { isScheduleStart, normalizeScheduleRoleIds } from "../domain/scheduleBounds";
 import type { AppProgressV1, AppState, LearningEvidence, MissionAttempt, PersistedMissionAttempt, AttemptSnapshot } from "../app/appTypes";
+import { isEvidenceComplete } from "../domain/teacherSummary";
 
 const scenarioIds: ReadonlySet<string> = new Set(scenarioCatalog.map(({ id }) => id));
 const stages = new Set(["briefing", "relations", "schedule", "simulation", "analysis", "revision", "report"]);
@@ -127,6 +128,10 @@ const validSavedStage = (saved: PersistedMissionAttempt, scenario: ScenarioDefin
   if (saved.selectedFindingId !== null && (!initial || !findings.some(({ id }) => id === saved.selectedFindingId))) return false;
   if (findings.length === 0 ? saved.selectedFindingId !== null : index >= 5 && saved.selectedFindingId === null) return false;
   if (index >= 6 && saved.revisedSchedule === null) return false;
+  const revised = saved.revisedSchedule ? snapshotFor(scenario, saved.revisedSchedule) : null;
+  const revisedSuccessful = Boolean(revised && isSuccessfulEvaluation(revised.evaluation));
+  if (index >= 6 && !revisedSuccessful) return false;
+  if (saved.completed && (!revisedSuccessful || !isEvidenceComplete(saved.evidence))) return false;
   return true;
 };
 
@@ -152,9 +157,9 @@ export function rehydrateProgress(progress: AppProgressV1): AppState {
     const withAnalysis = initialSnapshot && predictionValid ? 4 : reachable;
     const revisionReady = noWait ? saved.selectedFindingId === null : findingValid && saved.selectedFindingId !== null;
     const withRevision = withAnalysis >= 4 && revisionReady ? 5 : withAnalysis;
-    const withReport = withRevision >= 5 && revisedSnapshot && comparison ? 6 : withRevision;
+    const withReport = withRevision >= 5 && revisedSnapshot && comparison && isSuccessfulEvaluation(revisedSnapshot.evaluation) ? 6 : withRevision;
     const stage = ["briefing", "relations", "schedule", "simulation", "analysis", "revision", "report"][Math.min(requestedStage, withReport)] as MissionAttempt["stage"];
-    const safeComplete = Boolean(saved.completed && revisedSnapshot && comparison && Object.values(saved.evidence).every((value) => value.trim()) && revisedSnapshot.evaluation.metrics.safetyMet && revisedSnapshot.evaluation.metrics.qualityMet && !revisedSnapshot.evaluation.violations.some(({ kind }) => kind === "safety" || kind === "quality"));
+    const safeComplete = Boolean(saved.completed && revisedSnapshot && comparison && isEvidenceComplete(saved.evidence) && isSuccessfulEvaluation(revisedSnapshot.evaluation));
     attempts[scenario.id] = cloneFreeze({ scenarioId: scenario.id, stage, conditionsAcknowledged: saved.conditionsAcknowledged, relationEdges: saved.relationEdges, draftSchedule, initialSnapshot, prediction: saved.prediction, predictionExplanation: saved.predictionExplanation, selectedFindingId: findingValid ? saved.selectedFindingId : null, revisedSchedule, revisedSnapshot, comparison, evidence: saved.evidence, completed: safeComplete });
   }
   return cloneFreeze({ ...initial, selectedScenarioId: progress.selectedScenarioId, attempts, saveEnabled: true });

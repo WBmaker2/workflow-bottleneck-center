@@ -19,10 +19,17 @@ const noWaitScienceDraft = () => {
     "attach-materials": 6,
     "final-review": 8,
   };
-  const roles = ["A", "B", "C"] as const;
+  const roles: Record<string, readonly ("A" | "B" | "C")[]> = {
+    "verify-content": ["A"],
+    "prepare-print-file": ["B"],
+    "prepare-illustrations": ["C"],
+    "print-text": ["A"],
+    "attach-materials": ["B", "C"],
+    "final-review": ["A", "B"],
+  };
   return {
     learnerEdges: requiredEdgesFromScenario(scenario),
-    entries: scenario.tasks.map((task, index) => ({ taskId: task.id, plannedStart: starts[task.id]!, roleIds: task.peopleRequired === 1 ? [roles[index % roles.length]!] : ["A", "B"] as const })),
+    entries: scenario.tasks.map((task) => ({ taskId: task.id, plannedStart: starts[task.id]!, roleIds: roles[task.id]! })),
   };
 };
 
@@ -150,6 +157,15 @@ describe("versioned local progress", () => {
     expect(attempt.selectedFindingId).toBeNull();
     expect(attempt.revisedSnapshot).not.toBeNull();
     expect(attempt.comparison).not.toBeNull();
+  });
+
+  it("rejects a saved completed report whose revised evaluation misses the time goal", () => {
+    const progress = encodeProgress({ ...createInitialState(), saveEnabled: true });
+    const science = progress.attempts["science-display"];
+    const draft = noWaitScienceDraft();
+    const lateDraft = { ...draft, entries: draft.entries.map((entry) => entry.taskId === "final-review" ? { ...entry, plannedStart: 20 } : entry) };
+    const saved = { ...science, stage: "report" as const, conditionsAcknowledged: true, relationEdges: draft.learnerEdges, draftSchedule: draft, prediction: null, predictionExplanation: "", selectedFindingId: null, revisedSchedule: lateDraft, completed: true, evidence: { dependencyExplanation: "선행 관계를 충분히 설명한 문장입니다.", parallelExplanation: "병렬 관계를 충분히 설명한 문장입니다.", bottleneckExplanation: "표시된 병목이 없다는 사실을 설명합니다.", tradeoffExplanation: "안전 품질 역할 공정성을 함께 지킨 절충입니다." } };
+    expect(decodeProgress(JSON.stringify({ ...progress, attempts: { ...progress.attempts, "science-display": saved } }))).toBeNull();
   });
 
   it("rejects null prediction when a recomputed schedule has waits", () => {

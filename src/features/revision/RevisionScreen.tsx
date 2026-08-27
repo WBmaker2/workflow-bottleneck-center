@@ -3,7 +3,7 @@ import type { AttemptSnapshot } from "../../app/appTypes";
 import { LiveStatus } from "../../components/LiveStatus";
 import { RequiredActionButton } from "../../components/RequiredActionButton";
 import { compareAttempts } from "../../domain/comparison";
-import { evaluateSchedule } from "../../domain/evaluator";
+import { evaluateSchedule, isSuccessfulEvaluation } from "../../domain/evaluator";
 import { analyzeBottlenecks } from "../../domain/bottleneckAnalyzer";
 import { isScheduleReady } from "../../app/appSelectors";
 import { simulateSchedule } from "../../domain/simulator";
@@ -29,10 +29,10 @@ const snapshotFor = (scenario: ScenarioDefinition, draft: ScheduleDraft): Attemp
 
 const failureMessages = (snapshot: AttemptSnapshot): readonly string[] => {
   const { evaluation } = snapshot;
-  const lost = evaluation.violations.filter(({ kind }) => kind === "safety" || kind === "quality" || kind === "fairness");
-  if (lost.length === 0) return [];
-  const messages = evaluation.feedback.filter((message) => message.includes("완료 조건이 충족되지 않았습니다") || message.includes("공정성 조건이 충족되지 않았습니다"));
-  return messages.length > 0 ? messages : lost.map(({ message }) => message);
+  const lost = evaluation.violations.filter(({ kind }) => kind === "structure" || kind === "safety" || kind === "quality" || kind === "fairness" || kind === "time");
+  if (lost.length === 0 && isSuccessfulEvaluation(evaluation)) return [];
+  const messages = evaluation.feedback.length > 0 ? evaluation.feedback : lost.map(({ message }) => message);
+  return messages.length > 0 ? messages : ["수정 결과가 성공 상태가 아닙니다."];
 };
 
 export function RevisionScreen({ scenario, initialSnapshot, revisedSchedule, revisedSnapshot, comparison, onChange, onCompare, onReport }: RevisionScreenProps) {
@@ -40,9 +40,10 @@ export function RevisionScreen({ scenario, initialSnapshot, revisedSchedule, rev
   const draft = revisedSchedule ?? initialSnapshot.draft;
   const ready = isScheduleReady(scenario, draft);
   const failures = revisedSnapshot ? failureMessages(revisedSnapshot) : [];
+  const canCompare = draft.entries.length > 0;
   const compare = () => {
-    if (!ready) {
-      setMessage("모든 작업을 한 번씩 배치하고 공개된 관계·역할 조건을 확인하세요.");
+    if (!canCompare) {
+      setMessage("수정 일정에 작업을 하나 이상 배치하세요.");
       return;
     }
     const revised = snapshotFor(scenario, draft);
@@ -55,13 +56,13 @@ export function RevisionScreen({ scenario, initialSnapshot, revisedSchedule, rev
       <p>선택한 병목을 줄이되 안전·품질·역할 조건을 함께 지키는 수정안을 만들어 보세요.</p>
       <ScheduleEditor scenario={scenario} draft={draft} onChange={onChange} showPlacementStatus={false} />
       <LiveStatus message={message} />
-      <RequiredActionButton actionId="compare-revision" activeActionId={ready && comparison === null ? "compare-revision" : null} disabled={!ready} onClick={compare}>수정안 실행·비교</RequiredActionButton>
+      <RequiredActionButton actionId="compare-revision" activeActionId={canCompare && comparison === null ? "compare-revision" : null} disabled={!canCompare} onClick={compare}>수정안 실행·비교</RequiredActionButton>
       {revisedSnapshot && comparison && (
         <>
           {failures.length > 0 && <section className="revision-failure" role="alert" aria-labelledby="revision-failure-title"><h3 id="revision-failure-title">완료 조건을 먼저 확인하세요</h3><p>완료 조건이 충족되지 않았습니다.</p><ul>{failures.map((failure) => <li key={failure}>{failure}</li>)}</ul></section>}
           {failures.length === 0 && <p className="revision-summary">{comparison.summary}</p>}
           <AttemptComparisonTable initial={initialSnapshot} revised={revisedSnapshot} comparison={comparison} />
-          <button type="button" onClick={onReport}>보고서 작성</button>
+          {failures.length === 0 && <button type="button" onClick={onReport}>보고서 작성</button>}
         </>
       )}
       {!ready && <p>비교하려면 모든 작업을 빠짐없이 배치하고 역할 수와 시작 시점을 맞추세요.</p>}

@@ -41,6 +41,9 @@ test.describe("375px keyboard-only learner paths", () => {
       await expect(page.getByRole("group", { name: "병렬 관계 근거" })).toBeVisible();
       await expect(page.getByRole("group", { name: "병목 근거" })).toBeVisible();
       await expect(page.getByRole("group", { name: "절충 근거" })).toBeVisible();
+      for (const explanation of Object.values(solution.evidence)) {
+        await expect(page.getByText(explanation, { exact: true })).toBeVisible();
+      }
       expect(pageErrors).toEqual([]);
       expect(consoleErrors).toEqual([]);
     });

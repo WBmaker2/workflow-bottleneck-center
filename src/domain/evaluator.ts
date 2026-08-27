@@ -76,3 +76,11 @@ export function evaluateSchedule(
   const status = structural ? "incomplete" : metrics.safetyMet && metrics.qualityMet && metrics.fairnessMet && metrics.timeGoalMet ? "successful" : "revise";
   return { status, metrics, violations: Object.freeze(violations), feedback: Object.freeze(feedback) };
 }
+
+export function isSuccessfulEvaluation(evaluation: ScheduleEvaluation): boolean {
+  return evaluation.status === "successful"
+    && evaluation.metrics.safetyMet
+    && evaluation.metrics.qualityMet
+    && evaluation.metrics.fairnessMet
+    && evaluation.metrics.timeGoalMet;
+}

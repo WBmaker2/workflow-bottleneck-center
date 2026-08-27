@@ -21,6 +21,14 @@ const scheduleFixture = (): ScheduleDraft => ({
   learnerEdges: requiredEdgesFromScenario(scenario),
 });
 
+const successfulReportFixture = (): ScheduleDraft => {
+  const starts: Record<string, number> = { "verify-content": 0, "prepare-print-file": 2, "prepare-illustrations": 2, "print-text": 4, "attach-materials": 6, "final-review": 8 };
+  const roles: Record<string, readonly ("A" | "B" | "C")[]> = {
+    "verify-content": ["A"], "prepare-print-file": ["B"], "prepare-illustrations": ["C"], "print-text": ["A"], "attach-materials": ["B", "C"], "final-review": ["A", "B"],
+  };
+  return { entries: scenario.tasks.map((task) => ({ taskId: task.id, plannedStart: starts[task.id]!, roleIds: roles[task.id]! })), learnerEdges: requiredEdgesFromScenario(scenario) };
+};
+
 const progressFor = (stage: LearningStage): AppProgressV1 => {
   const progress = structuredClone(createInitialState());
   const encoded = {
@@ -42,7 +50,7 @@ const progressFor = (stage: LearningStage): AppProgressV1 => {
     }])),
   } as AppProgressV1;
   const attempt = encoded.attempts[scenario.id] as PersistedMissionAttempt;
-  const draft = scheduleFixture();
+  const draft = stage === "report" ? successfulReportFixture() : scheduleFixture();
   const result = simulateSchedule(scenario, draft);
   attempt.stage = stage;
   attempt.conditionsAcknowledged = stage !== "briefing";

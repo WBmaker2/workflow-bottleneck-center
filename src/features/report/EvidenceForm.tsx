@@ -83,8 +83,19 @@ export const EvidenceForm = forwardRef<EvidenceFormHandle, EvidenceFormProps>(fu
     ? `${titleFor(scenario, value.tradeoffTask)}을 바꾸어 시간/대기가 ${value.tradeoffChange}고, 안전·품질·역할 공정성은 ${value.tradeoffCondition}했습니다. ${value.tradeoffText.trim()}.`
     : "";
 
+  const directSentence = (field: EvidenceField, text: string): string => {
+    const candidate = text.trim();
+    const markers: Record<EvidenceField, readonly string[]> = {
+      dependencyExplanation: ["끝나야", "시작할"],
+      parallelExplanation: ["함께 할 수 있는 이유는"],
+      bottleneckExplanation: ["때문에", "작업이", "단위 기다렸습니다"],
+      tradeoffExplanation: ["안전·품질·역할 공정성은", "했습니다"],
+    };
+    return candidate.length >= 10 && candidate.endsWith(".") && markers[field].every((marker) => candidate.includes(marker)) ? candidate : "";
+  };
+
   const fieldForKey = (key: keyof FormState): EvidenceField => key.startsWith("dependency") ? "dependencyExplanation" : key.startsWith("parallel") ? "parallelExplanation" : key.startsWith("bottleneck") ? "bottleneckExplanation" : "tradeoffExplanation";
-  const sentenceForField = (field: EvidenceField, value: FormState): string => field === "dependencyExplanation" ? dependencySentence(value) : field === "parallelExplanation" ? parallelSentence(value) : field === "bottleneckExplanation" ? bottleneckSentence(value) : tradeoffSentence(value);
+  const sentenceForField = (field: EvidenceField, value: FormState): string => directSentence(field, value[`${field.replace("Explanation", "Text")}` as keyof FormState] as string) || (field === "dependencyExplanation" ? dependencySentence(value) : field === "parallelExplanation" ? parallelSentence(value) : field === "bottleneckExplanation" ? bottleneckSentence(value) : tradeoffSentence(value));
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     const next = { ...form, [key]: value };
     setForm(next);
@@ -95,7 +106,12 @@ export const EvidenceForm = forwardRef<EvidenceFormHandle, EvidenceFormProps>(fu
   };
 
   const validateAndFocus = () => {
-    const computed = { dependencyExplanation: dependencySentence(form).trim(), parallelExplanation: parallelSentence(form).trim(), bottleneckExplanation: bottleneckSentence(form).trim(), tradeoffExplanation: tradeoffSentence(form).trim() };
+    const computed = {
+      dependencyExplanation: directSentence("dependencyExplanation", form.dependencyText) || dependencySentence(form).trim(),
+      parallelExplanation: directSentence("parallelExplanation", form.parallelText) || parallelSentence(form).trim(),
+      bottleneckExplanation: directSentence("bottleneckExplanation", form.bottleneckText) || bottleneckSentence(form).trim(),
+      tradeoffExplanation: directSentence("tradeoffExplanation", form.tradeoffText) || tradeoffSentence(form).trim(),
+    };
     const valueFor = (field: EvidenceField) => !touched[field] && persistedRef.current[field].trim().length >= 10 ? persistedRef.current[field].trim() : computed[field];
     const dependency = valueFor("dependencyExplanation");
     const parallel = valueFor("parallelExplanation");

@@ -2,6 +2,7 @@ import { useRef, useState, type RefObject } from "react";
 import type { MissionAttempt } from "../../app/appTypes";
 import type { ScenarioDefinition } from "../../domain/types";
 import { isEvidenceComplete } from "../../domain/teacherSummary";
+import { isSuccessfulEvaluation } from "../../domain/evaluator";
 import { AttemptComparisonTable } from "../revision/AttemptComparisonTable";
 import { EvidenceForm, type EvidenceFormHandle } from "./EvidenceForm";
 import { TeacherSummaryView } from "./TeacherSummaryView";
@@ -21,7 +22,7 @@ const titleFor = (scenario: ScenarioDefinition, taskId: string) => scenario.task
 const scheduleText = (scenario: ScenarioDefinition, snapshot: NonNullable<MissionAttempt["initialSnapshot"]>) => snapshot.result.runs
   .slice().sort((left, right) => left.actualStart - right.actualStart || left.taskId.localeCompare(right.taskId))
   .map((run) => `${run.actualStart}단위: ${titleFor(scenario, run.taskId)} (${run.end - run.actualStart}단위)`).join(" · ");
-const safeQuality = (attempt: MissionAttempt) => Boolean(attempt.revisedSnapshot?.evaluation.metrics.safetyMet && attempt.revisedSnapshot.evaluation.metrics.qualityMet && !attempt.revisedSnapshot.evaluation.violations.some(({ kind }) => kind === "safety" || kind === "quality"));
+const evaluationReady = (attempt: MissionAttempt) => Boolean(attempt.revisedSnapshot && isSuccessfulEvaluation(attempt.revisedSnapshot.evaluation));
 
 export function ReportScreen({ scenario, attempt, saveEnabled = false, onEvidenceChange, onComplete, onClearSavedProgress, clearTriggerRef }: ReportScreenProps) {
   const formRef = useRef<EvidenceFormHandle>(null);
@@ -31,8 +32,8 @@ export function ReportScreen({ scenario, attempt, saveEnabled = false, onEvidenc
     if (!evidenceReady) {
       return;
     }
-    if (!safeQuality(attempt)) {
-      setMessage("수정 결과의 안전·품질 조건을 먼저 확인하세요.");
+    if (!evaluationReady(attempt)) {
+      setMessage("수정 결과의 안전·품질·역할 공정성·목표 시간을 먼저 확인하세요.");
       return;
     }
     onComplete();
