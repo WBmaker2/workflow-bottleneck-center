@@ -9,9 +9,10 @@ export interface ScheduleEditorProps {
   draft: ScheduleDraft;
   onChange(draft: ScheduleDraft): void;
   onMove?(taskId: string, plannedStart: number): void;
+  showPlacementStatus?: boolean;
 }
 
-export function ScheduleEditor({ scenario, draft, onChange, onMove }: ScheduleEditorProps) {
+export function ScheduleEditor({ scenario, draft, onChange, onMove, showPlacementStatus = true }: ScheduleEditorProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [view, setView] = useState<"grid" | "list">("grid");
 
@@ -39,7 +40,7 @@ export function ScheduleEditor({ scenario, draft, onChange, onMove }: ScheduleEd
   return (
     <section className="schedule-editor" aria-labelledby="schedule-editor-title">
       <h3 id="schedule-editor-title">작업 배치</h3>
-      <PlacementForm scenario={scenario} draft={draft} selectedTaskId={selectedTaskId} onPlace={place} />
+      <PlacementForm scenario={scenario} draft={draft} selectedTaskId={selectedTaskId} onPlace={place} showStatus={showPlacementStatus} />
       <div className="schedule-view-switcher" role="group" aria-label="일정 보기 방식">
         <button type="button" aria-pressed={view === "grid"} onClick={() => setView("grid")}>시간표 보기</button>
         <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>단계 목록 보기</button>

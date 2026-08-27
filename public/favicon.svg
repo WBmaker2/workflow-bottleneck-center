@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="작업 순서 병목 해결소">
+  <rect width="64" height="64" rx="14" fill="#2363a8"/>
+  <path d="M17 20h30v8H17zm0 16h22v8H17z" fill="#fff"/>
+  <circle cx="47" cy="40" r="6" fill="#f4c95d"/>
+</svg>

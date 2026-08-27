@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppProvider, useAppDispatch, useAppState } from "./app/AppProvider";
 import { getScenario, scenarioCatalog } from "./data/scenarios";
 import { BriefingScreen } from "./features/briefing/BriefingScreen";
@@ -11,6 +11,7 @@ import { AnalysisScreen } from "./features/analysis/AnalysisScreen";
 import { RevisionScreen } from "./features/revision/RevisionScreen";
 import { ReportScreen } from "./features/report/ReportScreen";
 import { ModalDialog } from "./components/ModalDialog";
+import { focusStageHeading } from "./a11y/focusStageHeading";
 
 const stageLabels = {
   briefing: "안내",
@@ -29,10 +30,19 @@ function AppShell() {
   const attempt = state.attempts[state.selectedScenarioId]!;
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const clearTriggerRef = useRef<HTMLButtonElement>(null);
+  const previousStage = useRef(attempt.stage);
+
+  useEffect(() => {
+    if (previousStage.current !== attempt.stage) {
+      previousStage.current = attempt.stage;
+      focusStageHeading(attempt.stage);
+    }
+  }, [attempt.stage]);
 
   return (
     <main aria-labelledby="app-title">
-      <h1 id="app-title">작업 순서 병목 해결소</h1>
+      <h1 id="app-title" tabIndex={-1} data-stage-heading aria-describedby="current-stage-label">작업 순서 병목 해결소</h1>
+      <span id="current-stage-label" className="visually-hidden">현재 단계 {stageLabels[attempt.stage]}</span>
       <p className="app-disclaimer">모든 시간은 교육용 가상 시간 단위이며 실제 작업 시간을 예측하지 않습니다.</p>
       <nav aria-label="시나리오 선택">
         <ul>
@@ -50,7 +60,7 @@ function AppShell() {
         이 기기에 진행 저장
       </label>
       <p id="save-toggle-description">선택하면 이 브라우저에 역할 A·B·C의 활동만 저장합니다. 학생 이름이나 온라인 계정은 사용하지 않습니다.</p>
-      <LiveStatus message={state.announcement} blocked={state.announcement.includes("안전") || state.announcement.includes("품질")} />
+      {state.announcement && <LiveStatus message={state.announcement} blocked={state.announcement.includes("안전") || state.announcement.includes("품질")} />}
       <section className="stage-shell" aria-labelledby="scenario-title">
         <h2 id="scenario-title">{scenario.title}</h2>
         <p>{`현재 단계: ${stageLabels[attempt.stage]}`}</p>
@@ -121,6 +131,10 @@ function AppShell() {
             <p>앞에서 확인한 조건을 바탕으로 다음 활동을 준비합니다.</p>
           </section>
         )}
+        <details className="mobile-summary-panel app-stage-summary">
+          <summary role="button">요약 보기</summary>
+          <p>현재 단계의 설명과 조작 방법을 다시 확인할 수 있습니다. 결과는 실제 측정값이 아닌 가상 모델입니다.</p>
+        </details>
       </section>
       <ModalDialog open={clearDialogOpen} title="저장된 진행 지우기" returnFocusRef={clearTriggerRef} onClose={() => setClearDialogOpen(false)}>
         <p>이 기기에 저장된 진행을 지울까요? 현재 화면의 활동은 계속 사용할 수 있습니다.</p>

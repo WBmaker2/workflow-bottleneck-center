@@ -53,7 +53,7 @@ export function RevisionScreen({ scenario, initialSnapshot, revisedSchedule, rev
     <section className="revision-screen" aria-labelledby="revision-screen-title">
       <h2 id="revision-screen-title">일정 수정</h2>
       <p>선택한 병목을 줄이되 안전·품질·역할 조건을 함께 지키는 수정안을 만들어 보세요.</p>
-      <ScheduleEditor scenario={scenario} draft={draft} onChange={onChange} />
+      <ScheduleEditor scenario={scenario} draft={draft} onChange={onChange} showPlacementStatus={false} />
       <LiveStatus message={message} />
       <RequiredActionButton actionId="compare-revision" activeActionId={ready && comparison === null ? "compare-revision" : null} disabled={!ready} onClick={compare}>수정안 실행·비교</RequiredActionButton>
       {revisedSnapshot && comparison && (

@@ -67,9 +67,13 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
     <section className="relation-screen" aria-labelledby="relation-screen-title">
       <h2 id="relation-screen-title">관계 설계판</h2>
       <p>작업 카드를 읽고 먼저 끝낼 작업과 다음에 시작할 작업을 연결하세요. 함께 할 수 있는 작업은 연결하지 않아도 됩니다.</p>
-      <RelationEditor scenario={scenario} edges={edges} onChange={addOrRemove} />
-      <LiveStatus message={announcement} />
-      <RelationBoard scenario={scenario} edges={edges} validation={validation} listHeadingRef={listHeadingRef} onRemove={(edge, sourceIndex) => addOrRemove(edges.filter((item, index) => sourceIndex === undefined ? item.beforeTaskId !== edge.beforeTaskId || item.afterTaskId !== edge.afterTaskId : index !== sourceIndex))} />
+      <div className="stage-layout">
+        <div className="stage-workspace">
+          <RelationEditor scenario={scenario} edges={edges} onChange={addOrRemove} />
+          <LiveStatus message={announcement} />
+          <RelationBoard scenario={scenario} edges={edges} validation={validation} listHeadingRef={listHeadingRef} onRemove={(edge, sourceIndex) => addOrRemove(edges.filter((item, index) => sourceIndex === undefined ? item.beforeTaskId !== edge.beforeTaskId || item.afterTaskId !== edge.afterTaskId : index !== sourceIndex))} />
+        </div>
+      </div>
       {messages.length > 0 && (
         <section ref={errorSummaryRef} className="relation-feedback" role="alert" tabIndex={-1} aria-labelledby="relation-feedback-title">
           <h3 id="relation-feedback-title">관계 확인 안내</h3>

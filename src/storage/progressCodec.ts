@@ -138,7 +138,7 @@ export function rehydrateProgress(progress: AppProgressV1): AppState {
     if (!saved) continue;
     const draftSchedule = canonicalDraft(scenario, { ...saved.draftSchedule, learnerEdges: saved.relationEdges });
     const requestedStage = stageIndex(saved.stage);
-    const initialSnapshot = requestedStage >= 4 ? snapshotFor(scenario, draftSchedule) : null;
+    const initialSnapshot = requestedStage >= 3 ? snapshotFor(scenario, draftSchedule) : null;
     const revisedSchedule = saved.revisedSchedule ? canonicalDraft(scenario, { ...saved.revisedSchedule, learnerEdges: saved.relationEdges }) : null;
     const revisedSnapshot = revisedSchedule && initialSnapshot ? snapshotFor(scenario, revisedSchedule) : null;
     const comparison = revisedSchedule && initialSnapshot && revisedSnapshot ? compareAttempts(scenario, draftSchedule, initialSnapshot.evaluation, revisedSchedule, revisedSnapshot.evaluation) : null;

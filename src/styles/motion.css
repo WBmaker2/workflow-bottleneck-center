@@ -1,0 +1,20 @@
+.gi-pulse {
+  animation: gi-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes gi-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(35 99 168 / 0.18); }
+  50% { box-shadow: 0 0 0 6px rgb(35 99 168 / 0.28); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gi-pulse {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--color-focus);
+  }
+
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

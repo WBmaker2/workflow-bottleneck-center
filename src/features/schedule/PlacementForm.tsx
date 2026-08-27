@@ -7,9 +7,10 @@ export interface PlacementFormProps {
   draft: ScheduleDraft;
   selectedTaskId: string | null;
   onPlace(entry: ScheduleEntry): void;
+  showStatus?: boolean;
 }
 
-export function PlacementForm({ scenario, draft, selectedTaskId, onPlace }: PlacementFormProps) {
+export function PlacementForm({ scenario, draft, selectedTaskId, onPlace, showStatus = true }: PlacementFormProps) {
   const [taskId, setTaskId] = useState(selectedTaskId ?? "");
   const [plannedStart, setPlannedStart] = useState("0");
   const [roleIds, setRoleIds] = useState<readonly ("A" | "B" | "C")[]>([]);
@@ -76,9 +77,9 @@ export function PlacementForm({ scenario, draft, selectedTaskId, onPlace }: Plac
             ? `필요한 도구: ${task.resources.map((requirement) => scenario.resources.find((resource) => resource.id === requirement.resourceId)?.label ?? requirement.resourceId).join(", ")}. 작업 카드의 조건으로 정해져 있어 선택할 수 없습니다.`
             : "필요한 도구: 없음."
           : "작업을 선택하면 필요한 도구가 표시됩니다."}</p>
-        <p id="placement-status" className="placement-status" role="status" aria-live="polite">
+        {showStatus && <p id="placement-status" className="placement-status" role="status" aria-live="polite">
           {!task ? "작업을 선택하세요." : remaining > 0 ? `${remaining}명 더 선택하세요.` : "필요한 역할을 모두 선택했습니다."}
-        </p>
+        </p>}
         <button type="submit" disabled={!valid}>일정에 배치</button>
       </fieldset>
     </form>

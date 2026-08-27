@@ -77,7 +77,7 @@ describe("analysis and revision learning flow", () => {
     expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4);
     expect(screen.getByLabelText("선행 관계 설명")).toHaveAttribute("maxlength", "180");
     await user.click(screen.getByRole("button", { name: "근거 문장 확인" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("네 가지 근거 문장을 모두 완성하세요.");
+    expect(screen.getByRole("status")).toHaveTextContent("네 가지 근거 문장을 모두 완성하세요.");
     expect(screen.getByLabelText("선행 관계 설명")).toHaveFocus();
   });
 
@@ -92,7 +92,7 @@ describe("analysis and revision learning flow", () => {
     expect(onChange).toHaveBeenLastCalledWith("dependencyExplanation", "");
     expect(onChange).not.toHaveBeenCalledWith("parallelExplanation", "");
     await user.click(screen.getByRole("button", { name: "근거 문장 확인" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("네 가지 근거 문장을 모두 완성하세요.");
+    expect(screen.getByRole("status")).toHaveTextContent("네 가지 근거 문장을 모두 완성하세요.");
   });
 
   it("uses a real task and exactly zero units for an honest no-wait bottleneck sentence", async () => {

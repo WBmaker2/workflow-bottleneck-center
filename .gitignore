@@ -8,3 +8,5 @@ test-results/
 *.local
 *.tsbuildinfo
 .superpowers/
+output/playwright/task-13-briefing-375.png
+output/playwright/task-13-briefing-desktop.png

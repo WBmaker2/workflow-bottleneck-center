@@ -15,7 +15,7 @@ export function TaskCard({ task, scenario }: TaskCardProps) {
 
   return (
     <article className="task-card" aria-labelledby={headingId}>
-      <h3 id={headingId}>{task.title}</h3>
+      <h4 id={headingId}>{task.title}</h4>
       <dl>
         <div className="task-card__field"><dt>예상 시간</dt><dd>{`예상 시간 ${task.duration}단위`}</dd></div>
         <div className="task-card__field">

@@ -58,8 +58,12 @@ export function ScheduleScreen({ scenario, attempt, onChange, onRun, onMove }: S
       <h2 id="schedule-screen-title">일정표</h2>
       <p>작업을 선택하고 시작 시점과 필요한 역할을 정해 배치하세요. 필요한 도구는 작업 카드에서 정해져 있습니다.</p>
       <p className="schedule-goal">목표 시간: {scenario.timeGoal}단위 · 모든 시간은 교육용 가상 시간입니다.</p>
-      <ScheduleEditor scenario={scenario} draft={draft ?? emptyDraft} onChange={onChange} {...(onMove ? { onMove } : {})} />
-      <LiveStatus message={message} />
+      <div className="stage-layout">
+        <div className="stage-workspace">
+          <ScheduleEditor scenario={scenario} draft={draft ?? emptyDraft} onChange={onChange} {...(onMove ? { onMove } : {})} />
+          <LiveStatus message={message} />
+        </div>
+      </div>
       <RequiredActionButton actionId={actionId} activeActionId={activeActionId} disabled={!ready} onClick={run}>{actionLabel}</RequiredActionButton>
       {!ready && <p>실행하려면 모든 작업을 빠짐없이 배치하고 역할 수와 시작 시점을 맞추세요.</p>}
     </section>

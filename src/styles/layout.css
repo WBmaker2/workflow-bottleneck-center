@@ -1,0 +1,153 @@
+main {
+  width: min(100% - 2rem, var(--content-width));
+  min-width: 0;
+  margin: 0 auto;
+  padding: var(--space-6) 0 calc(5rem + var(--safe-bottom));
+}
+
+.app-disclaimer {
+  max-width: var(--reading-width);
+  color: var(--color-ink-muted);
+}
+
+nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  margin: var(--space-4) 0;
+  list-style: none;
+}
+
+nav li {
+  min-width: 0;
+}
+
+nav button {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.save-toggle {
+  display: inline-flex;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.save-toggle input {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+#save-toggle-description {
+  max-width: var(--reading-width);
+  color: var(--color-ink-muted);
+  font-size: 0.9rem;
+}
+
+.stage-shell {
+  min-width: 0;
+  margin-top: var(--space-6);
+  padding: clamp(var(--space-4), 4vw, var(--space-6));
+  border: 2px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper);
+}
+
+.stage-shell > h2 {
+  margin-bottom: var(--space-1);
+}
+
+.stage-shell > p {
+  color: var(--color-ink-muted);
+}
+
+.briefing-screen,
+.relation-screen,
+.schedule-screen,
+.simulation-screen,
+.analysis-screen,
+.revision-screen,
+.report-screen {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+  max-width: var(--reading-width);
+}
+
+.stage-layout,
+.schedule-editor,
+.relation-board {
+  min-width: 0;
+}
+
+.stage-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.stage-layout > *,
+.schedule-editor > *,
+.relation-screen > *,
+.revision-screen > *,
+.report-screen > * {
+  min-width: 0;
+}
+
+.mobile-summary-panel {
+  min-width: 0;
+}
+
+.mobile-summary-panel > summary {
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mobile-summary-panel[open] > summary {
+  margin-bottom: var(--space-3);
+  border-color: var(--color-primary);
+}
+
+@media (max-width: 600px) {
+  main {
+    width: min(100% - 1rem, var(--content-width));
+    padding-top: var(--space-4);
+  }
+
+  .stage-shell {
+    margin-top: var(--space-4);
+    padding: var(--space-3);
+  }
+
+  .stage-layout {
+    display: block;
+  }
+
+  .stage-layout > .mobile-summary-panel,
+  .mobile-summary-panel {
+    margin-top: var(--space-4);
+  }
+
+  nav ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  nav button {
+    width: 100%;
+  }
+
+  .update-history-trigger {
+    right: 0.5rem;
+    bottom: max(0.5rem, var(--safe-bottom));
+  }
+}
