@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer, useRef } fro
 import { appReducer, createInitialState } from "./appReducer";
 import type { AppAction, AppState } from "./appTypes";
 import { rehydrateProgress } from "../storage/progressCodec";
-import { createLocalProgressRepository } from "../storage/localProgressRepository";
+import { createLocalProgressRepository, PROGRESS_STORAGE_KEY } from "../storage/localProgressRepository";
 import { createMemoryProgressRepository } from "../storage/progressRepository";
 import type { ProgressRepository } from "../storage/progressRepository";
 
@@ -26,7 +26,15 @@ export function AppProvider({ children, repository: suppliedRepository }: AppPro
   const repository = useMemo(() => suppliedRepository ?? defaultRepository(), [suppliedRepository]);
   const [state, dispatch] = useReducer(appReducer, undefined, () => {
     const progress = repository.hydrate();
-    return progress ? rehydrateProgress(progress) : createInitialState();
+    if (progress) return rehydrateProgress(progress);
+    try {
+      if (typeof window !== "undefined" && window.localStorage.getItem(PROGRESS_STORAGE_KEY) !== null) {
+        return { ...createInitialState(), announcement: "저장된 진행을 불러오지 못해 새 활동으로 시작합니다." };
+      }
+    } catch {
+      // Storage availability is optional; the learner can continue in memory.
+    }
+    return createInitialState();
   });
   const previousSaveEnabled = useRef(state.saveEnabled);
   const saveErrorAnnounced = useRef(false);
