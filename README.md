@@ -110,4 +110,4 @@ npm run verify
 
 ## GitHub Pages 배포
 
-`.github/workflows/deploy-pages.yml` 워크플로는 `main` 브랜치 push 또는 수동 실행 시 `npm ci`, `npm run verify`, 프로덕션 빌드를 수행한 뒤 GitHub Pages에 배포하도록 구성되어 있습니다. 예상 프로젝트 주소는 <https://wbmaker2.github.io/workflow-bottleneck-center/>입니다. 이 문서는 배포 구성을 설명하며, 실제 배포 완료·공개 URL 응답·학습자 경로 검증을 아직 주장하지 않습니다.
+`.github/workflows/deploy-pages.yml` 워크플로는 `main` 브랜치 push 또는 수동 실행 시 `npm ci`, `npm run verify`, 프로덕션 빌드를 수행한 뒤 GitHub Pages에 배포하도록 구성되어 있습니다. 공개 프로젝트 주소는 <https://wbmaker2.github.io/workflow-bottleneck-center/>입니다. 2026-08-27 workflow run [33046834902](https://github.com/WBmaker2/workflow-bottleneck-center/actions/runs/33046834902)에서 배포가 성공했고, HTML·favicon·JS·CSS 응답과 375px 키보드 전용 과학 미션 완주 경로를 확인했습니다. 모바일 전체 VoiceOver spoken evidence는 QA 문서의 조건부 게이트로 유지합니다.
