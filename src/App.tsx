@@ -44,7 +44,7 @@ function AppShell() {
       <h1 id="app-title" tabIndex={-1} data-stage-heading aria-describedby="current-stage-label">작업 순서 병목 해결소</h1>
       <span id="current-stage-label" className="visually-hidden">현재 단계 {stageLabels[attempt.stage]}</span>
       <p className="app-disclaimer">모든 시간은 교육용 가상 시간 단위이며 실제 작업 시간을 예측하지 않습니다.</p>
-      <nav aria-label="시나리오 선택">
+      <nav className="no-print" aria-label="시나리오 선택">
         <ul>
           {scenarioCatalog.map((item) => (
             <li key={item.id}>
@@ -55,11 +55,11 @@ function AppShell() {
           ))}
         </ul>
       </nav>
-      <label className="save-toggle" aria-describedby="save-toggle-description">
+      <label className="save-toggle no-print" aria-describedby="save-toggle-description">
         <input type="checkbox" checked={state.saveEnabled} onChange={(event) => dispatch({ type: "SET_SAVE_ENABLED", enabled: event.target.checked })} />
         이 기기에 진행 저장
       </label>
-      <p id="save-toggle-description">선택하면 이 브라우저에 역할 A·B·C의 활동만 저장합니다. 학생 이름이나 온라인 계정은 사용하지 않습니다.</p>
+      <p id="save-toggle-description" className="no-print">선택하면 이 브라우저에 역할 A·B·C의 활동만 저장합니다. 학생 이름이나 온라인 계정은 사용하지 않습니다.</p>
       {state.announcement && <LiveStatus message={state.announcement} blocked={state.announcement.includes("안전") || state.announcement.includes("품질")} />}
       <section className="stage-shell" aria-labelledby="scenario-title">
         <h2 id="scenario-title">{scenario.title}</h2>

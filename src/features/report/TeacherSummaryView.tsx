@@ -23,6 +23,6 @@ export function TeacherSummaryView({ scenario, attempt }: TeacherSummaryViewProp
     <ul>{summary.conditionSummary.map((condition) => <li key={condition}>{condition}</li>)}</ul>
     <section aria-labelledby="teacher-summary-evidence-title"><h4 id="teacher-summary-evidence-title">학습 근거</h4><ul>{Object.values(summary.explanations).map((explanation) => <li key={explanation}>{explanation}</li>)}</ul></section>
     <p className="teacher-summary-disclaimer">{summary.disclaimer}</p>
-    <button type="button" className="print-summary-button" onClick={() => window.print()}>교사용 요약 인쇄</button>
+    <button type="button" className="print-summary-button no-print" onClick={() => window.print()}>교사용 요약 인쇄</button>
   </section>;
 }

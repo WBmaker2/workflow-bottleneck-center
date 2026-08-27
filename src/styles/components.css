@@ -379,3 +379,28 @@
   .attempt-comparison td:nth-of-type(2)::before { content: "수정 일정"; }
   .attempt-comparison td:nth-of-type(3)::before { content: "변화"; }
 }
+
+@media print {
+  body > #root > main > * {
+    visibility: hidden;
+  }
+
+  .teacher-summary,
+  .teacher-summary * {
+    visibility: visible;
+  }
+
+  .teacher-summary {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+}

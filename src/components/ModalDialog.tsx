@@ -82,7 +82,7 @@ export function ModalDialog({ open, title, onClose, children, returnFocusRef }: 
 
   if (!open) return null;
   return (
-    <div ref={backdropRef} className="modal-backdrop" data-modal-backdrop="true" data-testid="modal-backdrop">
+    <div ref={backdropRef} className="modal-backdrop no-print" data-modal-backdrop="true" data-testid="modal-backdrop">
       <div ref={dialogRef} className="modal-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <h2 id={titleId}>{title}</h2>
         <button ref={closeRef} type="button" onClick={onClose}>닫기</button>

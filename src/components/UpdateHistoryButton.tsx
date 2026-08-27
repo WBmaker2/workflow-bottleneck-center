@@ -10,7 +10,7 @@ export function UpdateHistoryButton() {
 
   return (
     <>
-      <button ref={triggerRef} type="button" className="update-history-trigger" onClick={() => dispatch({ type: "OPEN_UPDATE_DIALOG" })}>
+      <button ref={triggerRef} type="button" className="update-history-trigger no-print" onClick={() => dispatch({ type: "OPEN_UPDATE_DIALOG" })}>
         업데이트 내역
       </button>
       <ModalDialog open={state.updateDialogOpen} title="업데이트 내역" returnFocusRef={triggerRef} onClose={() => dispatch({ type: "CLOSE_UPDATE_DIALOG" })}>

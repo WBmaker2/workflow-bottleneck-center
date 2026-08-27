@@ -146,6 +146,10 @@ describe("analysis and revision learning flow", () => {
     expect(screen.getByRole("heading", { name: "개선 보고서" })).toBeVisible();
     expect(screen.getByText("최초 일정과 수정 일정 비교")).toBeVisible();
     expect(screen.getAllByText("이 결과는 교육용 가상 모델이며 실제 사람의 생산성 평가에 사용할 수 없습니다.")).toHaveLength(2);
+    expect(screen.getByTestId("report-interactive")).toHaveClass("no-print");
+    expect(screen.getByRole("region", { name: "교사용 요약" })).not.toHaveClass("no-print");
+    expect(screen.getByRole("button", { name: "교사용 요약 인쇄" })).toHaveClass("no-print");
+    expect(screen.getByRole("button", { name: "개선 보고서 완성" })).toHaveClass("no-print");
     await user.click(screen.getByRole("button", { name: "교사용 요약 인쇄" }));
     expect(print).toHaveBeenCalledOnce();
     print.mockRestore();

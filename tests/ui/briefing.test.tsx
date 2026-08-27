@@ -149,8 +149,10 @@ it("opens dated update history and restores focus on close", async () => {
   await user.click(trigger);
   const dialog = screen.getByRole("dialog", { name: "업데이트 내역" });
   expect(within(dialog).getAllByText("2026-08-26")).toHaveLength(2);
+  expect(within(dialog).getAllByText("2026-08-27")).toHaveLength(1);
   expect(within(dialog).getByText("최초 설계 문서 작성")).toBeVisible();
   expect(within(dialog).getByText("MVP 구현과 네 시나리오 검수")).toBeVisible();
+  expect(within(dialog).getByText("AppProvider 손상 저장 복구 개선")).toBeVisible();
   await user.click(within(dialog).getByRole("button", { name: "닫기" }));
   expect(trigger).toHaveFocus();
 });
