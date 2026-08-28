@@ -124,13 +124,14 @@ describe("accessible learning shell", () => {
   });
 
   it("places stage help at the start of the stage shell before its screen content", () => {
-    renderAtStage("briefing");
-    const stageShell = document.querySelector(".stage-shell");
-    const help = stageShell?.querySelector(".stage-help-panel");
-    const screen = stageShell?.querySelector(".briefing-screen");
-    expect(help).not.toBeNull();
-    expect(screen).not.toBeNull();
-    expect(help && screen && (help.compareDocumentPosition(screen) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy();
+    renderAtStage("relations");
+    const stageShell = document.querySelector(".stage-shell")!;
+    const scenarioTitle = screen.getByRole("heading", { name: "과학 전시판 준비" });
+    const currentStage = screen.getByText("현재 단계: 관계 설계");
+    const help = screen.getByRole("complementary", { name: "관계 설계 단계 도움말" });
+    expect(stageShell.children[0]).toBe(scenarioTitle);
+    expect(stageShell.children[1]).toBe(currentStage);
+    expect(stageShell.children[2]).toBe(help);
   });
 
   it("keeps every interactive control named and avoids positive tab indexes", () => {

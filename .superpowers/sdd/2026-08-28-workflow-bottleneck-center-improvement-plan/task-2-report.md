@@ -110,3 +110,20 @@ vite build passed (85 modules transformed)
 ```
 
 우려: 기본 Playwright 4173 포트는 다른 프로젝트의 preview 서버가 점유해 사용할 수 없어 기존처럼 임시 4174 설정으로 검증했습니다. jsdom의 기존 canvas `getContext` 경고는 비실패 경고입니다. push/deploy, VoiceOver 검증, domain/save 계약 변경은 없습니다.
+
+## 수정 라운드 3
+
+이전 순서 테스트가 panel의 shell 내부·screen 이전 여부만 확인하던 open finding을 수정했습니다. `tests/ui/accessibility.test.tsx`에서 관계 단계의 실제 요소를 가져와 `stageShell.children[0]`이 시나리오 제목, `children[1]`이 현재 단계 문단, `children[2]`가 관계 설계 도움말인지 직접 assert합니다. panel 구현과 다른 기능 계약은 변경하지 않았습니다.
+
+검증 결과:
+
+```text
+npm test -- tests/ui/accessibility.test.tsx
+Test Files 1 passed; Tests 31 passed
+
+npm test && git diff --check
+Test Files 19 passed; Tests 179 passed
+git diff --check passed
+```
+
+push/deploy와 VoiceOver 검증은 수행하지 않았습니다.
