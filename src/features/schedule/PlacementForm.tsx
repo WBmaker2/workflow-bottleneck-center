@@ -49,8 +49,9 @@ export function PlacementForm({ scenario, draft, selectedTaskId, onPlace, showSt
           {scenario.tasks.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
         </select>
 
+        <p id="placement-start-help" className="placement-start-help">몇 단위부터 시작할까요?</p>
         <label htmlFor="placement-start">시작 시점</label>
-        <select id="placement-start" name="placement-start" value={plannedStart} onChange={(event) => setPlannedStart(event.target.value)}>
+        <select id="placement-start" name="placement-start" value={plannedStart} onChange={(event) => setPlannedStart(event.target.value)} aria-describedby="placement-start-help">
           {Array.from({ length: scheduleStartUpperBound(scenario) + 1 }, (_, value) => <option key={value} value={value}>{value}단위</option>)}
         </select>
 
@@ -58,6 +59,7 @@ export function PlacementForm({ scenario, draft, selectedTaskId, onPlace, showSt
         {alreadyPlaced && <p>이미 배치한 작업입니다. 다시 배치하면 시작 시점과 역할을 교체합니다.</p>}
         <fieldset className="role-picker">
           <legend>담당 역할</legend>
+          <p id="placement-role-help" className="placement-role-help">역할 A·B·C는 능력 이름이 아니라 맡은 자리 이름입니다. 작업에 필요한 자리를 골라 주세요.</p>
           {scenario.roles.map((role) => (
             <label key={role.id}>
               <input

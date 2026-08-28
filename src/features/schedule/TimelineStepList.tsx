@@ -20,6 +20,7 @@ export function TimelineStepList({ scenario, entries }: TimelineStepListProps) {
     <section className="timeline-step-list" aria-labelledby="step-list-title">
       <h3 id="step-list-title">단계 목록 보기</h3>
       <p>시작 시점과 시나리오 작업 순서에 따라 정리한 일정입니다.</p>
+      <p className="timeline-role-note">역할 A·B·C는 능력 이름이 아니라 맡은 자리 이름입니다. 각 작업이 맡은 자리를 확인하세요.</p>
       <p>함께 진행 가능 여부는 역할·도구 조건에 따라 실행에서 확인합니다.</p>
       {groups.length === 0 && <p>아직 배치한 작업이 없습니다.</p>}
       {groups.map(({ start, entries: group }) => (

@@ -47,6 +47,94 @@ const completeEntries = (scenarioId: "science-display" = "science-display"): Sch
 };
 
 describe("keyboard-first schedule editor", () => {
+  it("starts with the step list on a small viewport and can switch to the grid", async () => {
+    const user = userEvent.setup();
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: query === "(max-width: 600px)",
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      renderScheduleScreen();
+      expect(screen.getByRole("heading", { name: "단계 목록 보기" })).toBeVisible();
+      expect(screen.queryByRole("grid")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "시간표 보기" }));
+      expect(screen.getByRole("grid")).toBeVisible();
+      expect(screen.getByText("옆으로 움직여 시간 보기")).toBeVisible();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it("starts with the grid on a desktop viewport and switches back to the step list", async () => {
+    const user = userEvent.setup();
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      renderScheduleScreen();
+      expect(screen.getByRole("grid")).toBeVisible();
+      expect(screen.queryByRole("heading", { name: "단계 목록 보기" })).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "단계 목록 보기" }));
+      expect(screen.getByRole("heading", { name: "단계 목록 보기" })).toBeVisible();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it("keeps native task and start selects keyboard-operable", async () => {
+    const user = userEvent.setup();
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      renderScheduleScreen();
+      const taskSelect = screen.getByLabelText("배치할 작업");
+      const startSelect = screen.getByLabelText("시작 시점");
+      await user.tab();
+      expect(taskSelect).toHaveFocus();
+      await user.keyboard("{ArrowDown}");
+      expect(taskSelect).toHaveFocus();
+      await user.selectOptions(taskSelect, "verify-content");
+      await user.tab();
+      expect(startSelect).toHaveFocus();
+      await user.keyboard("{ArrowDown}");
+      expect(startSelect).toHaveFocus();
+      await user.selectOptions(startSelect, "1");
+      expect(startSelect).toHaveValue("1");
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it("explains roles as assigned places and asks for an easy start time", () => {
+    renderScheduleScreen();
+    expect(screen.getByText(/역할 A·B·C는 능력 이름이 아니라 맡은 자리 이름입니다/)).toBeVisible();
+    expect(screen.getByText("몇 단위부터 시작할까요?")).toBeVisible();
+  });
+
   it("places a task by task, start, and role selection", async () => {
     const user = userEvent.setup();
     renderScheduleScreen();

@@ -110,7 +110,7 @@ for (const stage of stages) {
     expect(parseFloat(outline)).toBeGreaterThanOrEqual(3);
 
     if (stage === "relations" || stage === "schedule") {
-      const workspace = page.locator(stage === "relations" ? ".relation-board" : ".timeline-grid-section");
+      const workspace = page.locator(stage === "relations" ? ".relation-board" : ".timeline-step-list");
       const summary = page.locator(".app-stage-summary");
       const workspaceBox = await workspace.boundingBox();
       const summaryBox = await summary.boundingBox();

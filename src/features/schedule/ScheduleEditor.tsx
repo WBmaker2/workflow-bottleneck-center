@@ -4,6 +4,15 @@ import { PlacementForm } from "./PlacementForm";
 import { TimelineGrid } from "./TimelineGrid";
 import { TimelineStepList } from "./TimelineStepList";
 
+export type ScheduleView = "grid" | "list";
+
+// This pure browser capability helper is part of the public schedule-view contract.
+// eslint-disable-next-line react-refresh/only-export-components
+export function initialScheduleView(): ScheduleView {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return "grid";
+  return window.matchMedia("(max-width: 600px)").matches ? "list" : "grid";
+}
+
 export interface ScheduleEditorProps {
   scenario: ScenarioDefinition;
   draft: ScheduleDraft;
@@ -14,7 +23,7 @@ export interface ScheduleEditorProps {
 
 export function ScheduleEditor({ scenario, draft, onChange, onMove, showPlacementStatus = true }: ScheduleEditorProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const [view, setView] = useState<ScheduleView>(initialScheduleView);
 
   const place = (entry: ScheduleEntry) => {
     const withoutTask = draft.entries.filter((item) => item.taskId !== entry.taskId);

@@ -246,9 +246,29 @@
 
 .timeline-grid {
   display: grid;
-  min-width: 34rem;
+  min-width: 0;
   grid-template-columns: 9rem repeat(var(--timeline-columns, 1), minmax(4rem, 1fr));
   border: 2px solid var(--color-line);
+}
+
+.timeline-grid-scroll-hint {
+  color: var(--color-ink-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.placement-start-help,
+.placement-role-help,
+.timeline-role-note {
+  margin-bottom: 0;
+  color: var(--color-ink-muted);
+  font-size: 0.9rem;
+}
+
+@media (min-width: 601px) {
+  .timeline-grid {
+    min-width: 34rem;
+  }
 }
 
 .timeline-grid__header,
