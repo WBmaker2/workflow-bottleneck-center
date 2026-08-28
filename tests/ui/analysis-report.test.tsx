@@ -67,6 +67,34 @@ const snapshot = (overrides: Partial<AttemptSnapshot> = {}): AttemptSnapshot => 
 });
 
 describe("analysis and revision learning flow", () => {
+  it("shows learner-friendly evidence progress, examples, and report learning wrap-up", () => {
+    const emptyAttempt = {
+      scenarioId: scenario.id, stage: "report" as const, conditionsAcknowledged: true, relationEdges: [], draftSchedule: draft,
+      initialSnapshot: null, prediction: null, predictionExplanation: "", selectedFindingId: null, revisedSchedule: null,
+      revisedSnapshot: null, comparison: null,
+      evidence: { dependencyExplanation: "", parallelExplanation: "", bottleneckExplanation: "", tradeoffExplanation: "" }, completed: false,
+    } satisfies MissionAttempt;
+    const { rerender } = render(<ReportScreen scenario={scenario} attempt={emptyAttempt} onEvidenceChange={() => undefined} onComplete={() => undefined} />);
+    expect(screen.getByLabelText("근거 문장 진행률")).toHaveTextContent("0/4");
+    expect(screen.getAllByText(/예시:/)).toHaveLength(4);
+    expect(screen.getAllByText(/다음에 채울 칸/)).toHaveLength(4);
+    expect(screen.getByRole("heading", { name: "오늘 배운 점" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "다음 도전" })).toBeVisible();
+    const wrapUp = screen.getByRole("region", { name: "오늘 배운 점" });
+    expect(within(wrapUp).getAllByText(/안전/).length).toBeGreaterThan(0);
+    expect(within(wrapUp).getAllByText(/품질/).length).toBeGreaterThan(0);
+
+    const completeAttempt = { ...emptyAttempt, evidence: {
+      dependencyExplanation: "선행 관계를 충분히 설명한 문장입니다.",
+      parallelExplanation: "병렬 관계를 충분히 설명한 문장입니다.",
+      bottleneckExplanation: "표시된 병목이 없다는 사실을 설명합니다.",
+      tradeoffExplanation: "안전 품질 역할 공정성을 함께 지킨 절충입니다.",
+    } } satisfies MissionAttempt;
+    rerender(<ReportScreen scenario={scenario} attempt={completeAttempt} onEvidenceChange={() => undefined} onComplete={() => undefined} />);
+    expect(screen.getByLabelText("근거 문장 진행률")).toHaveTextContent("4/4");
+    expect(screen.getByRole("button", { name: "개선 보고서 완성" })).toBeVisible();
+  });
+
   it("shows the four exact evidence prompts and rejects incomplete evidence with focus", async () => {
     const user = userEvent.setup();
     render(<EvidenceForm scenario={scenario} attempt={{ evidence: { dependencyExplanation: "", parallelExplanation: "", bottleneckExplanation: "", tradeoffExplanation: "" }, selectedFindingId: "bottleneck-1" }} onChange={() => undefined} />);

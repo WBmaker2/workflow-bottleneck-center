@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { WaitReason } from "../../domain/types";
+import { learnerCopy } from "../../data/learnerCopy";
 
 export interface BottleneckPredictionProps {
   onSubmit(reason: WaitReason, explanation: string): void;
@@ -33,7 +34,8 @@ export function BottleneckPrediction({ onSubmit, submittedReason = null, submitt
   }
   return (
     <fieldset className="prediction-gate" aria-label="기다림 원인 예측">
-      <legend>무엇 때문에 기다릴까요?</legend>
+      <legend>{learnerCopy.analysisTerms.prediction}</legend>
+      <p>{learnerCopy.analysisTerms.predictionDescription}</p>
       {choices.map((choice) => <label key={choice.reason}>
         <input type="radio" name="wait-reason" value={choice.reason} checked={reason === choice.reason} onChange={() => setReason(choice.reason)} />
         {choice.label}

@@ -317,20 +317,6 @@
   min-width: 38rem;
 }
 
-.evidence-form {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.evidence-form fieldset {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.evidence-form fieldset > label {
-  min-width: 0;
-}
-
 .update-history-trigger {
   position: static;
   min-height: 2.75rem;
@@ -418,6 +404,7 @@
   .attempt-comparison td:nth-of-type(1)::before { content: "최초 일정"; }
   .attempt-comparison td:nth-of-type(2)::before { content: "수정 일정"; }
   .attempt-comparison td:nth-of-type(3)::before { content: "변화"; }
+
 }
 
 @media print {

@@ -14,16 +14,9 @@ import { RevisionScreen } from "./features/revision/RevisionScreen";
 import { ReportScreen } from "./features/report/ReportScreen";
 import { ModalDialog } from "./components/ModalDialog";
 import { focusStageHeading } from "./a11y/focusStageHeading";
+import { learnerCopy } from "./data/learnerCopy";
 
-const stageLabels = {
-  briefing: "안내",
-  relations: "관계 설계",
-  schedule: "일정표",
-  simulation: "가상 실행",
-  analysis: "병목 분석",
-  revision: "수정",
-  report: "개선 보고서",
-} as const;
+const stageLabels = learnerCopy.stageLabels;
 
 function AppShell() {
   const state = useAppState();
