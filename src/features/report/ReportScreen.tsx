@@ -55,7 +55,7 @@ export function ReportScreen({ scenario, attempt, saveEnabled = false, onEvidenc
       {initial && revised && comparison && <AttemptComparisonTable initial={initial} revised={revised} comparison={comparison} />}
       <section aria-labelledby="report-bottleneck-title"><h3 id="report-bottleneck-title">선택한 병목</h3>{finding ? <p>{finding.blockerLabel} 때문에 {titleFor(scenario, finding.blockedTaskId)} 작업이 {finding.delayUnits}단위 늦어졌습니다. {finding.explanation}</p> : <p>이번 실행에서 선택한 병목이 없습니다. 기록된 기다림이 없는 흐름일 수 있습니다.</p>}</section>
       <EvidenceForm ref={formRef} scenario={scenario} attempt={attempt} onChange={onEvidenceChange} />
-      <ReportLearningWrapUp scenario={scenario} comparison={comparison} selectedFinding={finding ?? null} />
+      <ReportLearningWrapUp scenario={scenario} comparison={comparison} selectedFinding={finding ?? null} hasRecordedWaits={initial ? initial.result.waits.length > 0 : undefined} />
       <p className="report-disclaimer">이 결과는 교육용 가상 모델이며 실제 사람의 생산성 평가에 사용할 수 없습니다.</p>
       <LiveStatus message={message} />
       <button type="button" className="no-print" onClick={complete} disabled={attempt.completed}>개선 보고서 완성</button>

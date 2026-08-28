@@ -109,10 +109,53 @@ describe("analysis and revision learning flow", () => {
     expect(screen.getByText("다음에 채울 칸: 선행 이유 선택")).toBeVisible();
   });
 
+  it("walks every evidence field in its declared order", async () => {
+    const user = userEvent.setup();
+    render(<EvidenceForm scenario={scenario} attempt={{ evidence: { dependencyExplanation: "", parallelExplanation: "", bottleneckExplanation: "", tradeoffExplanation: "" }, selectedFindingId: null, initialSnapshot: snapshot() }} onChange={() => undefined} />);
+
+    const group = (name: string) => screen.getByRole("group", { name });
+    const next = (groupName: string, label: string) => expect(within(group(groupName)).getByText(`다음에 채울 칸: ${label}`)).toBeVisible();
+    const choose = async (label: string, value: string, nextLabel: string) => {
+      await user.selectOptions(screen.getByRole("combobox", { name: label }), value);
+      const groupName = label.startsWith("선행") || label.startsWith("시작") ? "선행 관계 근거" : label.startsWith("함께") || label.startsWith("병렬") ? "병렬 관계 근거" : label.startsWith("병목") || label.startsWith("기다림") ? "병목 근거" : "절충 근거";
+      next(groupName, nextLabel);
+    };
+
+    next("선행 관계 근거", "선행 작업 선택");
+    await choose("선행 작업 선택", "verify-content", "시작 작업 선택");
+    await choose("시작 작업 선택", "prepare-print-file", "선행 이유 선택");
+    await choose("선행 이유 선택", "품질을 확인하기 위해서", "선행 관계 설명");
+    await user.type(screen.getByLabelText("선행 관계 설명"), "앞 결과가 필요하기 때문입니다");
+    next("선행 관계 근거", "이 근거는 완성했습니다.");
+
+    next("병렬 관계 근거", "함께 할 첫 작업");
+    await choose("함께 할 첫 작업", "print-text", "함께 할 둘째 작업");
+    await choose("함께 할 둘째 작업", "prepare-illustrations", "병렬 이유 선택");
+    await choose("병렬 이유 선택", "서로 다른 역할로 진행할 수 있어서", "병렬 관계 설명");
+    await user.type(screen.getByLabelText("병렬 관계 설명"), "두 역할이 서로 기다리지 않기 때문입니다");
+    next("병렬 관계 근거", "이 근거는 완성했습니다.");
+
+    next("병목 근거", "병목 원인 선택");
+    await choose("병목 원인 선택", "bottleneck-1", "기다림 단위 선택");
+    await choose("기다림 단위 선택", "2", "병목 근거 설명");
+    await user.type(screen.getByLabelText("병목 근거 설명"), "프린터가 사용 중이었기 때문입니다");
+    next("병목 근거", "이 근거는 완성했습니다.");
+
+    next("절충 근거", "바꾼 작업 선택");
+    await choose("바꾼 작업 선택", "print-text", "수정 전략 선택");
+    await choose("수정 전략 선택", "순서 바꾸기", "시간/대기 변화 선택");
+    await choose("시간/대기 변화 선택", "줄어들었", "조건 결과 선택");
+    await choose("조건 결과 선택", "지켰", "절충 근거 설명");
+    await user.type(screen.getByLabelText("절충 근거 설명"), "확인과 안전을 함께 지키기 위해서입니다");
+    expect(screen.getAllByText("다음에 채울 칸: 이 근거는 완성했습니다.")).toHaveLength(4);
+  });
+
   it("uses the three learner analysis terms without exposing technical path wording", async () => {
-    render(<AnalysisScreen scenario={scenario} snapshot={snapshot()} prediction="resource" predictionExplanation="공유 도구를 기다렸습니다." selectedFindingId={null} onSelect={() => undefined} onBeginRevision={() => undefined} />);
+    render(<AnalysisScreen scenario={scenario} snapshot={snapshot()} prediction="resource" predictionExplanation="공유 도구를 기다렸습니다." selectedFindingId="bottleneck-1" onSelect={() => undefined} onBeginRevision={() => undefined} />);
     expect(screen.getByText("뒤 작업을 기다리게 만든 곳")).toBeVisible();
+    expect(screen.getAllByText("긴 작업이 아니라 뒤 작업을 기다리게 만든 곳을 찾아보세요.")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "기다림의 원인" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "선택한 기다림의 원인" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "내가 먼저 예상한 이유" })).toBeVisible();
     expect(screen.queryByText(/인과·영향 경로/)).not.toBeInTheDocument();
   });
@@ -120,14 +163,16 @@ describe("analysis and revision learning flow", () => {
   it("recovers learning from both finding branches and every comparison condition", () => {
     const finding = snapshot().bottlenecks.findings[0]!;
     const comparison = { finishDelta: -2, waitDelta: -2, changedTaskIds: ["print-text"], preserved: { safety: false, quality: false, fairness: false }, summary: "조건을 확인합니다." };
-    const { rerender } = render(<ReportLearningWrapUp scenario={scenario} comparison={comparison} selectedFinding={finding} />);
+    const { rerender } = render(<ReportLearningWrapUp scenario={scenario} comparison={comparison} selectedFinding={finding} hasRecordedWaits />);
     const wrapUp = screen.getByRole("region", { name: "오늘 배운 점" });
     expect(within(wrapUp).getAllByRole("listitem")).toHaveLength(3);
-    expect(within(wrapUp).getByText(/병목은 가장 오래 걸린 일이 아니라 뒤 작업을 기다리게 만든 원인이에요/)).toBeVisible();
+    expect(within(wrapUp).getByText("프린터 때문에 글 인쇄가 기다린 까닭을 찾아보았어요. 병목은 가장 오래 걸린 일이 아니라 뒤 작업을 기다리게 만든 원인이에요.")).toBeVisible();
     expect(within(wrapUp).getByText(/안전 확인·품질 확인·협력 방법/)).toBeVisible();
-    rerender(<ReportLearningWrapUp scenario={scenario} comparison={null} selectedFinding={null} />);
+    rerender(<ReportLearningWrapUp scenario={scenario} comparison={null} selectedFinding={null} hasRecordedWaits={false} />);
     expect(screen.getByText("이번 실행에는 기다림을 만든 원인이 없었다는 기록도 흐름을 설명하는 근거예요.")).toBeVisible();
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    rerender(<ReportLearningWrapUp scenario={scenario} comparison={null} selectedFinding={null} />);
+    expect(screen.getByText("아직 병목을 선택하지 않았어요. 실행 기록의 기다림을 확인해 보세요.")).toBeVisible();
   });
 
   it("shows the four exact evidence prompts and rejects incomplete evidence with focus", async () => {
