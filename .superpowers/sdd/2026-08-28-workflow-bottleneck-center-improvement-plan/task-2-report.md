@@ -57,3 +57,27 @@ npm run test:e2e -- e2e/update-history.spec.ts
 - jsdom 테스트 실행 중 기존 SVG canvas 경고(`HTMLCanvasElement.getContext() is not implemented`)가 출력되지만 테스트 실패는 아니며 제품 코드 결함으로 확인되지 않았습니다.
 - 실제 VoiceOver·사람 대상 수업 수용성 검증은 범위 밖입니다.
 - 배포·공개 URL·HVC 등록은 요청대로 보류했습니다.
+
+## 수정 라운드 1
+
+리뷰 지적에 따라 `e2e/update-history.spec.ts`의 테스트 이름을 실제 4개 기록에 맞게 바꾸고, 375px 실행에서 `.stage-shell`과 `[data-testid="update-history-trigger"]`의 실제 `boundingBox()`를 비교하도록 보강했습니다. trigger가 stage shell의 하단 이후에 있고 같은 콘텐츠 가로 영역 안에 놓이는지 확인해 모바일 겹침·가로 이탈을 검증합니다.
+
+`e2e/learner-improvements.spec.ts`에는 `page.emulateMedia({ reducedMotion: "reduce" })` 검증을 추가했습니다. briefing의 조건 확인 pulse에서 실제 `animationName === "none"`, `animationDuration === "0s"`, `boxShadow !== "none"`을 확인합니다. 기존 simulation/report pulse 0 계약과 도메인·저장 계약은 변경하지 않았습니다. briefing CTA가 기존 1800px 문서 위치 안에 있도록 StageHelpPanel은 shell 콘텐츠 뒤 일반 흐름에 배치했습니다.
+
+검증 결과:
+
+```text
+npm run build
+vite build passed (85 modules transformed)
+
+npx playwright test e2e/update-history.spec.ts e2e/learner-improvements.spec.ts --config=/private/tmp/workflow-bottleneck-playwright.config.ts
+4 passed (1280px update history, 375px update history, 375px learner flow, reduced motion)
+
+npm test && npm run lint && npm run typecheck && npm run check:file-length
+Test Files 19 passed; Tests 178 passed
+lint passed
+typecheck passed
+Checked 92 source files (max 499 lines)
+```
+
+기본 `npm run test:e2e -- ...`는 실행 전에 다른 프로젝트의 `127.0.0.1:4173` 서버가 사용 중이어서 시작되지 않았습니다. 다른 서버를 종료하지 않고 임시 Playwright 설정으로 4174 포트를 사용해 동일 테스트를 재실행했고 4개가 통과했습니다. 기존 jsdom canvas 경고는 계속 출력되지만 실패가 아닙니다. push/deploy와 VoiceOver 검증은 수행하지 않았습니다.

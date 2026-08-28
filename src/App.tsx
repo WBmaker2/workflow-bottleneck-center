@@ -56,7 +56,6 @@ function AppShell() {
       <section className="stage-shell" aria-labelledby="scenario-title">
         <h2 id="scenario-title">{scenario.title}</h2>
         <p>{`현재 단계: ${stageLabels[attempt.stage]}`}</p>
-        <StageHelpPanel stage={attempt.stage} />
         {attempt.stage === "briefing" ? (
           <BriefingScreen scenario={scenario} attempt={attempt} dispatch={dispatch} />
         ) : attempt.stage === "relations" ? (
@@ -129,6 +128,7 @@ function AppShell() {
           <p>현재 단계의 설명과 조작 방법을 다시 확인할 수 있습니다. 결과는 실제 측정값이 아닌 가상 모델입니다.</p>
         </details>
       </section>
+      <StageHelpPanel stage={attempt.stage} />
       <ModalDialog open={clearDialogOpen} title="저장된 진행 지우기" returnFocusRef={clearTriggerRef} onClose={() => setClearDialogOpen(false)}>
         <p>이 기기에 저장된 진행을 지울까요? 현재 화면의 활동은 계속 사용할 수 있습니다.</p>
         <button type="button" onClick={() => { dispatch({ type: "SET_SAVE_ENABLED", enabled: false }); setClearDialogOpen(false); }}>저장된 진행 지우기 확인</button>
