@@ -166,65 +166,6 @@
   flex: 0 0 auto;
 }
 
-.relation-list {
-  display: grid;
-  gap: var(--space-2);
-  padding-left: 1.5rem;
-}
-
-.relation-list li {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2);
-  border-bottom: 2px solid var(--color-line);
-}
-
-.relation-list li span {
-  min-width: 0;
-}
-
-.relation-graph {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-  border: 2px solid var(--color-line);
-  border-radius: var(--radius-md);
-  background: #f7fafc;
-}
-
-.relation-node rect {
-  fill: var(--color-surface);
-  stroke: var(--color-primary);
-  stroke-width: 2;
-}
-
-.relation-node text,
-.relation-edge-label {
-  fill: var(--color-ink);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.relation-edge--safety,
-.relation-edge-label--safety {
-  color: var(--color-safety);
-}
-
-.relation-edge--quality,
-.relation-edge-label--quality {
-  color: var(--color-quality);
-}
-
-.relation-edge--workflow,
-.relation-edge-label--workflow {
-  color: var(--color-primary);
-}
-
 .bottleneck-cards {
   display: grid;
   gap: var(--space-3);
@@ -417,11 +358,6 @@
   .task-card__field {
     grid-template-columns: 1fr;
     gap: 0;
-  }
-
-  .relation-list li {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .attempt-comparison table {

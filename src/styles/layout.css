@@ -143,6 +143,10 @@ main {
   min-width: 0;
 }
 
+.relation-board {
+  overflow: hidden;
+}
+
 .mobile-summary-panel {
   min-width: 0;
 }

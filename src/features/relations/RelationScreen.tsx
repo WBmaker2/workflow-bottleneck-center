@@ -38,6 +38,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
   const edges = attempt.relationEdges;
   const validation = validateRelationMap(scenario, edges);
   const [announcement, setAnnouncement] = useState("");
+  const [hasValidated, setHasValidated] = useState(false);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   const errorSummaryRef = useRef<HTMLElement>(null);
   const previousCount = useRef(edges.length);
@@ -51,13 +52,17 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
     }
   }, [edges.length]);
 
+  useEffect(() => {
+    if (hasValidated && validation.status === "invalid") errorSummaryRef.current?.focus();
+  }, [hasValidated, validation.status]);
+
   const addOrRemove = (nextEdges: readonly DependencyEdge[]) => {
     if (onChange) onChange(nextEdges);
     else dispatch?.({ type: "SET_RELATIONS", edges: nextEdges });
   };
   const continueToSchedule = () => {
+    setHasValidated(true);
     if (validation.status === "invalid") {
-      errorSummaryRef.current?.focus();
       return;
     }
     if (onContinue) onContinue();
@@ -75,7 +80,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
           <RelationBoard scenario={scenario} edges={edges} validation={validation} listHeadingRef={listHeadingRef} onRemove={(edge, sourceIndex) => addOrRemove(edges.filter((item, index) => sourceIndex === undefined ? item.beforeTaskId !== edge.beforeTaskId || item.afterTaskId !== edge.afterTaskId : index !== sourceIndex))} />
         </div>
       </div>
-      {messages.length > 0 && (
+      {hasValidated && messages.length > 0 && (
         <section ref={errorSummaryRef} className="relation-feedback" role="alert" tabIndex={-1} aria-labelledby="relation-feedback-title">
           <h3 id="relation-feedback-title">관계 확인 안내</h3>
           <ul>{messages.map((message) => <li key={message}>{message}</li>)}</ul>

@@ -46,6 +46,19 @@ describe("accessible relationship design", () => {
     expect(screen.getByText(/학생이 추가한 관계는 안전하지만 기다림이 늘어날 수 있습니다/)).toBeVisible();
   });
 
+  it("shows every missing required relation as a readable hint before validation", () => {
+    const scenario = getScenario("science-display");
+    const missing = requiredEdgesFromScenario(scenario);
+    const attempt = { ...createInitialState().attempts[scenario.id]!, stage: "relations" as const, conditionsAcknowledged: true, relationEdges: [] };
+    render(<RelationScreen scenario={scenario} attempt={attempt} onChange={() => undefined} onContinue={() => undefined} />);
+
+    const heading = screen.getByRole("heading", { name: "필수 관계 힌트" });
+    const requirementList = within(heading.parentElement!).getByRole("list");
+    expect(within(requirementList).getAllByRole("listitem")).toHaveLength(missing.length);
+    expect(within(requirementList).getAllByRole("listitem")[0]).toHaveTextContent("먼저 자료 확인, 그 다음 인쇄 글 정리 — 확인한 글만 인쇄 파일에 넣습니다");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("keeps selected values after validation feedback", async () => {
     const user = userEvent.setup();
     renderRelationScreen();
@@ -82,12 +95,15 @@ describe("accessible relationship design", () => {
     ["unknown", [{ beforeTaskId: "missing-task", afterTaskId: "verify-content" }], "알 수 없는 작업을 포함해 관계를 확인해야 합니다."],
     ["cycle", [{ beforeTaskId: "verify-content", afterTaskId: "prepare-print-file" }, { beforeTaskId: "prepare-print-file", afterTaskId: "verify-content" }], "작업이 서로를 기다리는 순환 관계라 확인해야 합니다."],
     ["duplicate", [{ beforeTaskId: "verify-content", afterTaskId: "prepare-print-file" }, { beforeTaskId: "verify-content", afterTaskId: "prepare-print-file" }], "같은 관계가 두 번 있어 하나만 남겨야 합니다."],
-  ] as const)("describes %s invalid rows without safe extra wording", (kind, edges, neutralMessage) => {
+  ] as const)("describes %s invalid rows without safe extra wording", async (kind, edges, neutralMessage) => {
     const scenario = getScenario("science-display");
     const attempt = { ...createInitialState().attempts[scenario.id]!, stage: "relations" as const, conditionsAcknowledged: true, relationEdges: edges };
+    const user = userEvent.setup();
     render(<RelationScreen scenario={scenario} attempt={attempt} onChange={() => undefined} onContinue={() => undefined} />);
     const relationList = within(document.querySelector("ol.relation-list")!);
     expect(relationList.getAllByRole("listitem").some((item) => item.textContent?.includes("이 관계는 안전하지만"))).toBe(false);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "관계 확인" }));
     expect(screen.getByRole("alert")).toHaveTextContent(neutralMessage);
     expect(relationList.getAllByRole("listitem").length).toBe(edges.length);
   });
@@ -111,29 +127,34 @@ describe("accessible relationship design", () => {
     error.mockRestore();
   });
 
-  it("shows the screen-level safe/wait summary only for valid-with-extra", () => {
+  it("shows the screen-level safe/wait summary only for valid-with-extra", async () => {
     const scenario = getScenario("science-display");
     const required = requiredEdgesFromScenario(scenario);
     const extra = { beforeTaskId: "verify-content", afterTaskId: "final-review" } as const;
     const safeText = "학생이 추가한 관계는 안전하지만 기다림이 늘어날 수 있습니다. 필요하다면 삭제하고 흐름을 비교해 보세요.";
+    const user = userEvent.setup();
     const renderAttempt = (edges: readonly DependencyEdge[]) => { cleanup(); return render(<RelationScreen scenario={scenario} attempt={{ relationEdges: edges }} onChange={() => undefined} onContinue={() => undefined} />); };
 
     renderAttempt([...required, extra]);
     expect(screen.getByText(safeText)).toBeVisible();
 
     renderAttempt([...required, extra, required[0]!]);
+    await user.click(screen.getByRole("button", { name: "관계 확인" }));
     expect(screen.queryByText(safeText)).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("같은 관계가 두 번 있어 하나만 남겨야 합니다.");
 
     renderAttempt([...required, extra, { beforeTaskId: "prepare-print-file", afterTaskId: "verify-content" }]);
+    await user.click(screen.getByRole("button", { name: "관계 확인" }));
     expect(screen.queryByText(safeText)).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("작업이 서로를 기다리는 순환 관계라 확인해야 합니다.");
 
     renderAttempt([...required, extra, { beforeTaskId: "unknown-task", afterTaskId: "verify-content" }]);
+    await user.click(screen.getByRole("button", { name: "관계 확인" }));
     expect(screen.queryByText(safeText)).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("알 수 없는 작업을 포함해 관계를 확인해야 합니다.");
 
     renderAttempt([extra]);
+    await user.click(screen.getByRole("button", { name: "관계 확인" }));
     expect(screen.queryByText(safeText)).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("작업 카드에 공개된 관계를 다시 확인하세요: 글 인쇄 뒤에 글과 그림 부착을 시작합니다.");
   });
