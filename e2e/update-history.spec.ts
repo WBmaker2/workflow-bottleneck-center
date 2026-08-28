@@ -4,8 +4,8 @@ test.describe("업데이트 내역", () => {
   for (const viewport of [{ width: 1280, height: 900 }, { width: 375, height: 812 }]) {
     test(`${viewport.width}px button opens all dated records`, async ({ page }) => {
       await page.setViewportSize(viewport);
-      await page.goto("/");
-      const trigger = page.getByRole("button", { name: "업데이트 내역" });
+      await page.goto("./");
+      const trigger = page.locator("footer.app-footer").getByRole("button", { name: "업데이트 내역", exact: true });
       await expect(trigger).toBeVisible();
       await trigger.scrollIntoViewIfNeeded();
       await expect(trigger).toBeInViewport();

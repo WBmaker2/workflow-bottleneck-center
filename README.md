@@ -50,7 +50,7 @@
 ## 접근성·사용 안내
 
 - **키보드**: Tab/Shift+Tab으로 이동하고 Enter 또는 Space로 버튼·체크박스·라디오를 조작합니다. 화살표 키로 native select와 라디오 선택을 바꿀 수 있습니다. 모든 작업·시점·담당 선택은 드래그 없이 가능합니다.
-- **375px 화면**: 관계 설계판과 일정표는 각각 한 화면에서 확인하며, `요약 보기` 패널로 설명을 다시 엽니다. 가로 스크롤 없이 단계 흐름을 완료할 수 있도록 설계했습니다.
+- **375px 화면**: 관계 의미 목록과 일정 단계 목록을 우선 제공하며 시간축은 필요시 가로로 봅니다. `요약 보기` 패널로 설명을 다시 열 수 있습니다.
 - **스크린 리더**: `lang="ko"`, 단계 제목, 선행 관계의 텍스트 목록, 상태 `aria-live` 안내를 사용합니다. 색상만으로 관계·대기·안전 상태를 구분하지 않습니다.
 - **모션 감소**: 운영체제에서 `prefers-reduced-motion: reduce`를 켜면 `gi-pulse` 깜빡임과 자동 진행 대신 정적 윤곽선과 수동 단계 이동을 사용합니다.
 - 화면 오른쪽 아래의 **업데이트 내역** 버튼에서 설계·개발 기록을 확인할 수 있습니다.
@@ -64,6 +64,7 @@ npm ci
 npm run dev
 npm run test
 npm run test:e2e
+WORKFLOW_E2E_PORT=4174 npm run test:e2e
 npm run verify
 ```
 
@@ -78,7 +79,7 @@ npm run verify
 | 단위·UI | `npm run test` | 도메인, reducer, 저장, React UI, 아키텍처 가드 |
 | 파일 크기 | `npm run check:file-length` | `src`, `tests`, `e2e`, `scripts` 각 소스 499줄 이하 |
 | 프로덕션 빌드 | `npm run build` | 타입 검사와 Vite `dist` 생성 |
-| 통합 학습 경로 | `npm run test:e2e` | 네 미션, 키보드·모바일·저장·업데이트 내역 |
+| 통합 학습 경로 | `WORKFLOW_E2E_PORT=4174 npm run test:e2e` | 네 미션, 키보드·모바일·저장·업데이트 내역·인쇄 |
 | 전체 로컬 검증 | `npm run verify` | lint → typecheck → Vitest → 파일 크기 → build |
 
 `tests/architecture/noExternalServices.test.ts`는 외부 서비스 호출, 개인 식별 필드, 도메인 계층의 브라우저·React 의존, 시뮬레이터의 비결정성, 금지된 경쟁·생산성·휴식 문구, 시나리오 4종, 업데이트 날짜 형식을 고정합니다.
@@ -102,6 +103,7 @@ npm run verify
 
 - 코드 파일은 기능별 책임을 분리하며 `src`, `tests`, `e2e`, `scripts`의 `.ts`, `.tsx`, `.css`, `.mjs` 파일은 500줄이 되기 전에 나눕니다. 검사 기준은 **499줄 이하**입니다.
 - 화면이나 판정 규칙을 바꿀 때는 `src/data/updateHistory.ts`에 실제 변경 날짜(`YYYY-MM-DD`)와 짧은 내역을 추가합니다. 앱의 업데이트 내역 버튼은 이 기록을 보여 줍니다.
+- 최신 개선 기록(2026-08-28): 학습자 안내·모바일 탐색 흐름을 개선하고 375px·키보드·reduced-motion·외부 요청·인쇄 회귀 게이트를 정리했습니다.
 - 안전·품질·역할 공정성의 근거는 화면과 테스트에서 함께 확인하며, 실제 사람에 대한 승인·측정·순위를 주장하지 않습니다.
 
 ## 범위 밖 기능과 현재 계획의 경계

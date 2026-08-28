@@ -74,9 +74,15 @@
 
 ## 우려 및 미수행 항목
 
+> 이 절의 전체 E2E strict heading·persistence selector 실패와 line count는 Task 5 당시의 historical pre-fix 기록입니다. Task 6에서 exact heading/static footer selector와 4174 포트 설정을 수정했습니다.
+
 - 전체 `npm run test:e2e`에는 기존 fixture의 strict heading selector 충돌(단계 도움말과 실제 heading이 함께 `getByRole(..., { name: ... })`에 매칭)과 기존 persistence selector 충돌이 남아 있습니다. 변경 후 직접 관련된 375px analysis/report 및 print 테스트는 통과했습니다.
 - 테스트 출력에 jsdom의 기존 `HTMLCanvasElement.getContext()` 미구현 경고가 반복되지만 실패 원인은 아닙니다.
 - 커밋 후 push/deploy/HVC 등록은 요청대로 하지 않았습니다.
+
+## Task 6 historical update
+
+Task 5에서 관찰된 strict heading 충돌은 `병목 근거`와 `개선 보고서`의 exact/unique selector로 정리했고, persistence 경로는 실제 저장 UI 계약에 맞춰 재검증 대상으로 넘겼습니다. 최신 실행 결과와 환경 제한은 `docs/qa/learner-usability-verification.md`와 Task 6 보고서에 기록합니다.
 
 ## Fix round 2 — 정확한 학습 문장·실행 기록 분기·전체 입력 순서
 

@@ -66,6 +66,8 @@ Responsive E2E의 7개 실패는 모든 375px stage에서 공통으로 `업데�
 
 ## 우려 및 범위 밖
 
+> 아래 우려와 수치는 Task 4 당시의 historical pre-fix 기록입니다. Task 6에서 static footer 선택자와 4174 포트 회귀 설정을 반영했습니다.
+
 - Vitest 중 jsdom의 기존 `HTMLCanvasElement.getContext()` 미구현 경고가 출력되지만 테스트 실패는 아닙니다.
 - 375px 전체 responsive E2E는 위 기존 공통 in-viewport assertion 때문에 완료되지 않았습니다. Task 6에서 전체 E2E를 확장·정리할 때 함께 재검증해야 합니다.
 - 명시적 grid 전환 시 시간축 안내는 제공하지만, 현재 요청대로 34rem 최소 폭은 데스크톱 media query에만 적용했습니다.
@@ -99,3 +101,7 @@ npx playwright test e2e/learner-improvements.spec.ts e2e/accessibility-responsiv
 ```
 
 남은 우려: Vitest의 기존 jsdom canvas `getContext()` 미구현 경고는 남아 있으나 실패가 아닙니다. VoiceOver, 음성 기능, 외부 기능, domain/save 변경, push·배포·HVC 등록은 여전히 범위 밖입니다.
+
+## Task 6 historical update
+
+Task 4의 375px 업데이트 trigger viewport 실패 기록은 당시 선택자 계약에 대한 관찰이며 현재 구현의 실패 판정이 아닙니다. 최신 파일 길이와 전체 명령 결과는 Task 6 보고서에 기록합니다.
