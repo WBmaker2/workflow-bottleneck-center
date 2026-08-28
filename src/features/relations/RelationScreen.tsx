@@ -5,6 +5,7 @@ import { validateRelationMap } from "../../domain/relationValidator";
 import { LiveStatus } from "../../components/LiveStatus";
 import { RelationBoard } from "./RelationBoard";
 import { RelationEditor } from "./RelationEditor";
+import { RequiredActionButton } from "../../components/RequiredActionButton";
 
 export interface RelationScreenProps {
   scenario: ScenarioDefinition;
@@ -83,7 +84,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
       {validation.status === "valid-with-extra" && (
         <p className="relation-extra-feedback">학생이 추가한 관계는 안전하지만 기다림이 늘어날 수 있습니다. 필요하다면 삭제하고 흐름을 비교해 보세요.</p>
       )}
-      <button type="button" onClick={continueToSchedule}>관계 확인</button>
+      <RequiredActionButton actionId="confirm-relations" activeActionId="confirm-relations" onClick={continueToSchedule}>관계 확인</RequiredActionButton>
     </section>
   );
 }

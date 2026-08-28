@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { AppProvider, useAppDispatch, useAppState } from "./app/AppProvider";
-import { getScenario, scenarioCatalog } from "./data/scenarios";
+import { getScenario } from "./data/scenarios";
 import { BriefingScreen } from "./features/briefing/BriefingScreen";
 import { LiveStatus } from "./components/LiveStatus";
 import { UpdateHistoryButton } from "./components/UpdateHistoryButton";
+import { ScenarioNavigation } from "./components/ScenarioNavigation";
+import { StageHelpPanel } from "./components/StageHelpPanel";
 import { RelationScreen } from "./features/relations/RelationScreen";
 import { ScheduleScreen } from "./features/schedule/ScheduleScreen";
 import { SimulationScreen } from "./features/simulation/SimulationScreen";
@@ -44,17 +46,7 @@ function AppShell() {
       <h1 id="app-title" tabIndex={-1} data-stage-heading aria-describedby="current-stage-label">작업 순서 병목 해결소</h1>
       <span id="current-stage-label" className="visually-hidden">현재 단계 {stageLabels[attempt.stage]}</span>
       {attempt.stage !== "briefing" && <p className="app-disclaimer">모든 시간은 교육용 가상 시간 단위이며 실제 작업 시간을 예측하지 않습니다.</p>}
-      <nav className="no-print" aria-label="시나리오 선택">
-        <ul>
-          {scenarioCatalog.map((item) => (
-            <li key={item.id}>
-              <button type="button" aria-current={item.id === scenario.id ? "page" : undefined} onClick={() => dispatch({ type: "SELECT_SCENARIO", scenarioId: item.id })}>
-                {item.title}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <ScenarioNavigation selectedScenarioId={state.selectedScenarioId} onSelect={(scenarioId) => dispatch({ type: "SELECT_SCENARIO", scenarioId })} />
       <label className="save-toggle no-print" aria-describedby="save-toggle-description">
         <input type="checkbox" checked={state.saveEnabled} onChange={(event) => dispatch({ type: "SET_SAVE_ENABLED", enabled: event.target.checked })} />
         이 기기에 진행 저장
@@ -64,6 +56,7 @@ function AppShell() {
       <section className="stage-shell" aria-labelledby="scenario-title">
         <h2 id="scenario-title">{scenario.title}</h2>
         <p>{`현재 단계: ${stageLabels[attempt.stage]}`}</p>
+        <StageHelpPanel stage={attempt.stage} />
         {attempt.stage === "briefing" ? (
           <BriefingScreen scenario={scenario} attempt={attempt} dispatch={dispatch} />
         ) : attempt.stage === "relations" ? (
@@ -140,7 +133,7 @@ function AppShell() {
         <p>이 기기에 저장된 진행을 지울까요? 현재 화면의 활동은 계속 사용할 수 있습니다.</p>
         <button type="button" onClick={() => { dispatch({ type: "SET_SAVE_ENABLED", enabled: false }); setClearDialogOpen(false); }}>저장된 진행 지우기 확인</button>
       </ModalDialog>
-      <UpdateHistoryButton />
+      <footer className="app-footer no-print"><UpdateHistoryButton /></footer>
     </main>
   );
 }

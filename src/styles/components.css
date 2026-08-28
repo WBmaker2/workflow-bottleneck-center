@@ -371,14 +371,26 @@
 }
 
 .update-history-trigger {
-  position: fixed;
-  right: 1rem;
-  bottom: max(1rem, var(--safe-bottom));
-  z-index: 5;
+  position: static;
   min-height: 2.75rem;
   border-color: var(--color-primary);
   border-radius: 999px;
   background: var(--color-surface);
+}
+
+.scenario-navigation__button {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1) var(--space-2);
+  width: 100%;
+}
+
+.scenario-selection-status {
+  color: var(--color-primary-dark);
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
 .modal-backdrop {
