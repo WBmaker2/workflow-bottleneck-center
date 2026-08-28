@@ -81,3 +81,32 @@ Checked 92 source files (max 499 lines)
 ```
 
 기본 `npm run test:e2e -- ...`는 실행 전에 다른 프로젝트의 `127.0.0.1:4173` 서버가 사용 중이어서 시작되지 않았습니다. 다른 서버를 종료하지 않고 임시 Playwright 설정으로 4174 포트를 사용해 동일 테스트를 재실행했고 4개가 통과했습니다. 기존 jsdom canvas 경고는 계속 출력되지만 실패가 아닙니다. push/deploy와 VoiceOver 검증은 수행하지 않았습니다.
+
+## 수정 라운드 2
+
+plan content 순서에 맞춰 `StageHelpPanel`을 다시 `.stage-shell` 안의 시나리오 제목·현재 단계 문단 직후에 배치했습니다. `tests/ui/accessibility.test.tsx`에 panel이 stage shell 내부에 있고 `.briefing-screen`보다 앞선 DOM 순서인지 고정하는 테스트를 먼저 추가했으며, 복원 전에는 panel이 없어 실패했습니다.
+
+복원 후 375px 기존 CTA 위치 회귀를 막기 위해 `src/styles/layout.css` 모바일 규칙에서 briefing 간격을 줄이고 도움말의 두 라벨/문장을 한 줄 흐름으로 압축했습니다. 의미·단계별 문장은 유지했으며, update trigger의 stage-shell 전체 boundingBox non-overlap 검증과 reduced-motion 실제 computed style 검증은 그대로 유지했습니다.
+
+검증 결과:
+
+```text
+npm test -- tests/ui/accessibility.test.tsx
+Test Files 1 passed; Tests 31 passed
+
+npm run build
+vite build passed (85 modules transformed)
+
+npx playwright test e2e/update-history.spec.ts e2e/learner-improvements.spec.ts --config=/private/tmp/workflow-bottleneck-playwright.config.ts
+4 passed (1280px update history, 375px update history, 375px learner flow, reduced motion)
+
+npm test -- tests/ui/accessibility.test.tsx && npm run verify
+Test Files 1 passed; Tests 31 passed
+Test Files 19 passed; Tests 179 passed
+lint passed
+typecheck passed
+Checked 92 source files (max 499 lines)
+vite build passed (85 modules transformed)
+```
+
+우려: 기본 Playwright 4173 포트는 다른 프로젝트의 preview 서버가 점유해 사용할 수 없어 기존처럼 임시 4174 설정으로 검증했습니다. jsdom의 기존 canvas `getContext` 경고는 비실패 경고입니다. push/deploy, VoiceOver 검증, domain/save 계약 변경은 없습니다.

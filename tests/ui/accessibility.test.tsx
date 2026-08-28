@@ -123,6 +123,16 @@ describe("accessible learning shell", () => {
     expect(getComputedStyle(selected).borderColor).not.toBe(getComputedStyle(other).borderColor);
   });
 
+  it("places stage help at the start of the stage shell before its screen content", () => {
+    renderAtStage("briefing");
+    const stageShell = document.querySelector(".stage-shell");
+    const help = stageShell?.querySelector(".stage-help-panel");
+    const screen = stageShell?.querySelector(".briefing-screen");
+    expect(help).not.toBeNull();
+    expect(screen).not.toBeNull();
+    expect(help && screen && (help.compareDocumentPosition(screen) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy();
+  });
+
   it("keeps every interactive control named and avoids positive tab indexes", () => {
     renderAtStage("briefing");
     const unnamed = [...document.querySelectorAll<HTMLElement>("button, a, input, select, textarea")].filter((element) => !element.getAttribute("aria-label") && !element.getAttribute("aria-labelledby") && !(element as HTMLInputElement).labels?.length && !element.textContent?.trim());

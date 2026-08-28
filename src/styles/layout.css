@@ -173,6 +173,10 @@ main {
     padding: var(--space-3);
   }
 
+  .briefing-screen {
+    gap: 0;
+  }
+
   .stage-layout {
     display: block;
   }
@@ -192,7 +196,26 @@ main {
   }
 
   .stage-help-panel dl > div {
+    display: block;
     grid-template-columns: 1fr;
     gap: 0;
+  }
+
+  .stage-help-panel {
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3) var(--space-1);
+  }
+
+  .stage-help-panel dl {
+    gap: 0;
+  }
+
+  .stage-help-panel dt,
+  .stage-help-panel dd {
+    display: inline;
+  }
+
+  .stage-help-panel dt::after {
+    content: ": ";
   }
 }
