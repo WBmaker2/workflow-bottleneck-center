@@ -159,12 +159,26 @@ for (const scenarioId of ["science-display", "library-cart", "class-presentation
     page.on("request", (request) => requests.push(request.url()));
     page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
     page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.addInitScript(() => {
+      const trace = { forwardTabs: 0, backwardTabs: 0 };
+      Object.assign(window, { __workflowKeyboardTrace: trace });
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Tab") return;
+        if (event.shiftKey) trace.backwardTabs += 1;
+        else trace.forwardTabs += 1;
+      }, true);
+    });
     await installKeyboardOnlyFailureGuard(page);
     await page.addInitScript(() => localStorage.removeItem("workflow-bottleneck-center:progress:v1"));
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("./");
     await completeMissionByRealKeyboard(page, missionSolutions[scenarioId]);
     await expect(page.getByRole("heading", { name: "개선 보고서", exact: true })).toBeVisible();
+    const keyboardTrace = await page.evaluate(() => (window as Window & {
+      __workflowKeyboardTrace?: { forwardTabs: number; backwardTabs: number };
+    }).__workflowKeyboardTrace ?? { forwardTabs: 0, backwardTabs: 0 });
+    expect(keyboardTrace.forwardTabs).toBeGreaterThan(0);
+    expect(keyboardTrace.backwardTabs).toBeGreaterThan(0);
     await page.waitForTimeout(50);
     const origin = new URL(page.url()).origin;
     expect(requests.filter((url) => !url.startsWith(`${origin}/`) && url !== origin)).toEqual([]);

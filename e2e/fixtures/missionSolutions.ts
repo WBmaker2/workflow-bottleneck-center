@@ -3,6 +3,7 @@ import { requiredEdgesFromScenario } from "../../src/domain/scenarioValidation";
 import { scenarioCatalog } from "../../src/data/scenarios";
 import type { LearningEvidence } from "../../src/app/appTypes";
 import type { ScenarioId, ScheduleEntry, ScheduleDraft } from "../../src/domain/types";
+import { getNativeSelectSupport } from "./selectKeyboardProbe";
 
 export interface MissionSolution {
   scenarioId: ScenarioId;
@@ -318,16 +319,15 @@ export const completeMissionByKeyboard = async (page: Page, solution: MissionSol
   await pressButton(page, "개선 보고서 완성");
 };
 
-/**
- * Keyboard-only acceptance helpers. These intentionally follow the browser's
- * tab order so the learner-flow gate cannot pass by jumping focus or changing
- * a select's selectedIndex from injected page code.
- */
-const tabTo = async (page: Page, target: Locator, direction: "forward" | "backward" = "forward"): Promise<void> => {
+// Keyboard-only helpers follow browser tab order; no focus jumps or injected select state.
+const tabTo = async (page: Page, target: Locator, direction: "forward" | "backward" = "forward", options: { stepAwayFromTarget?: boolean } = {}): Promise<void> => {
   await expect(target).toHaveCount(1);
   const key = direction === "forward" ? "Tab" : "Shift+Tab";
   for (let attempt = 0; attempt < 160; attempt += 1) {
-    if (await target.evaluate((element) => element === document.activeElement)) return;
+    if (await target.evaluate((element) => element === document.activeElement)) {
+      if (direction === "backward" && options.stepAwayFromTarget) await page.keyboard.press("Shift+Tab");
+      return;
+    }
     await page.keyboard.press(key);
   }
   const active = await page.evaluate(() => {
@@ -336,23 +336,23 @@ const tabTo = async (page: Page, target: Locator, direction: "forward" | "backwa
   });
   throw new Error(`Tab navigation could not reach ${await target.getAttribute("aria-label") ?? "target"}; active element is ${active}`);
 };
-
 const pressButtonByTab = async (page: Page, name: string | RegExp): Promise<void> => {
   const button = page.getByRole("button", { name });
   await expect(button).toBeEnabled();
   await tabTo(page, button);
+  await tabTo(page, button, "backward", { stepAwayFromTarget: true });
+  await tabTo(page, button);
   await page.keyboard.press("Enter");
 };
-
 const pressCheckableByTab = async (page: Page, locator: Locator): Promise<void> => {
   await tabTo(page, locator);
   if (!(await locator.isChecked())) await page.keyboard.press("Space");
   await expect(locator).toBeChecked();
 };
-
 const chooseSelectValueByTab = async (page: Page, label: string, value: string): Promise<void> => {
   const select = page.getByLabel(label);
   await tabTo(page, select);
+  const nativeSelectSupported = await getNativeSelectSupport(page);
   const optionExists = await select.evaluate((element, wanted) => Array.from((element as HTMLSelectElement).options).some((option) => option.value === wanted), value);
   if (!optionExists) throw new Error(`Option ${value} is missing from ${label}`);
   await page.keyboard.press("Home");
@@ -361,13 +361,14 @@ const chooseSelectValueByTab = async (page: Page, label: string, value: string):
     await page.keyboard.press("ArrowDown");
   }
   await page.keyboard.press("Tab");
-  // Chromium's headless macOS shell does not commit native select key events;
-  // retain the real Tab/Home/Arrow path and use Playwright's DOM-level native
-  // select operation only when that platform quirk leaves the controlled value unchanged.
-  if (await select.inputValue() !== value) await select.selectOption(value);
+  if (await select.inputValue() !== value) {
+    if (nativeSelectSupported || process.env.WORKFLOW_E2E_ALLOW_SELECT_FALLBACK !== "1") {
+      throw new Error(`Native select keyboard input did not commit ${label}=${value} (probe=${nativeSelectSupported}). Set WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 only after the probe detects this environment quirk.`);
+    }
+    await select.selectOption(value);
+  }
   await expect(select).toHaveValue(value);
 };
-
 const addRequiredRelationsByTab = async (page: Page, scenarioId: ScenarioId): Promise<void> => {
   const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;
   for (const edge of requiredEdgesFromScenario(scenario)) {
@@ -379,7 +380,6 @@ const addRequiredRelationsByTab = async (page: Page, scenarioId: ScenarioId): Pr
   }
   await pressButtonByTab(page, "관계 확인");
 };
-
 const selectRoleByTab = async (page: Page, roleId: RoleId): Promise<void> => {
   await pressCheckableByTab(page, page.getByRole("checkbox", { name: `역할 ${roleId}` }));
 };

@@ -260,7 +260,7 @@ WORKFLOW_E2E_PORT=4174 npm run test:e2e
 git diff --check
 ```
 
-예상 결과는 lint/typecheck/build 성공, Vitest 전체 기존 173개 이상 + 새 UI 테스트 통과, file-length 최대 499줄, Playwright 기존 31개 이상 + 개선 E2E 전체 통과, diff whitespace 오류 0입니다. `Canvas getContext`·localStorage jsdom 경고가 남으면 테스트 실패와 분리해 기록하고 제품 오류로 판정하지 않습니다.
+예상 결과는 lint/typecheck/build 성공, Vitest 전체 기존 173개 이상 + 새 UI 테스트 통과, file-length 최대 499줄, diff whitespace 오류 0입니다. Playwright 기본 명령은 fallback 없이 native-select probe 결과를 드러내며, probe=false인 호스트에서는 `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`을 명시한 별도 실행에서만 기존 31개 이상 + 개선 E2E 전체 통과를 기록합니다. `Canvas getContext`·localStorage jsdom 경고가 남으면 테스트 실패와 분리해 기록하고 제품 오류로 판정하지 않습니다.
 
 ## 향후 커밋 단계
 
