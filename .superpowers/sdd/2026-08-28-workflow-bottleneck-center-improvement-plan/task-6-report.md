@@ -88,16 +88,17 @@ push·배포·HVC 등록은 수행하지 않았습니다.
 최종 검증 결과:
 
 ```text
+npm run verify  통과 (19 Vitest files, 191 tests; file-length max 499; build succeeded)
 npm test -- --run tests/ui/briefing.test.tsx tests/ui/accessibility.test.tsx tests/ui/simulation.test.tsx  3 files, 58 passed
 npm run lint  통과
 npm run typecheck  통과
 npm run check:file-length  Checked 99 source files (max 499 lines)
 WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/accessibility-responsive.spec.ts  10 passed
-WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/learner-improvements.spec.ts  6 passed, 6 failed (strict; native-select probe=false)
-WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e -- e2e/learner-improvements.spec.ts  12 passed
-WORKFLOW_E2E_PORT=4174 npm run test:e2e  29 passed, 14 failed (strict; native-select probe=false)
-WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e  43 passed
+WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/learner-improvements.spec.ts  7 passed, 6 failed (13 total; strict; native-select probe=false)
+WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e -- e2e/learner-improvements.spec.ts  13 passed (13 total; probe=false 환경에서 명시적 opt-in)
+WORKFLOW_E2E_PORT=4174 npm run test:e2e  30 passed, 14 failed (44 total; strict; native-select probe=false)
+WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e  44 passed (44 total; probe=false 환경에서 명시적 opt-in)
 git diff --check  통과
 ```
 
-strict 전체의 14개 실패는 앱 assertion 실패가 아니라 이 macOS headless Chromium 환경에서 실제 native select가 Tab/Home/ArrowDown 키 선택을 커밋하지 않는 한계가 각 native-select 경로에 드러난 결과입니다. visible probe로 재시도해도 `probe=false`였으며 fallback은 명시적 opt-in에서만 사용했습니다. VoiceOver, push, deploy, HVC 등록은 수행하지 않았습니다.
+strict learner subset은 13개 중 7 passed/6 failed, strict 전체는 44개 중 30 passed/14 failed이며 strict PASS가 아닙니다. 14개 실패는 앱 assertion 실패가 아니라 이 macOS headless Chromium 환경에서 실제 native select가 Tab/Home/ArrowDown 키 선택을 커밋하지 않는 환경 한계가 각 native-select 경로에 드러난 결과입니다. visible probe로 재시도해도 `probe=false`였으며 fallback은 명시적 opt-in에서만 사용했습니다. opt-in learner 13/13·전체 44/44는 이 환경 한정 결과입니다. VoiceOver, push, deploy, HVC 등록은 수행하지 않았습니다.

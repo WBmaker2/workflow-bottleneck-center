@@ -24,22 +24,18 @@ VoiceOver 구현 및 검증, 사람 대상 승인, 학생 음성 기능은 이�
 실행 순서는 계획에 맞춰 다음과 같습니다.
 
 ```text
-npm run lint                         통과
-npm run typecheck                    통과
-npm test                             통과
-npm run check:file-length            통과 (최대 499줄)
-npm run build                        통과
+npm run verify                       통과 (19 Vitest files, 191 tests; file-length max 499; build succeeded)
 WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/accessibility-responsive.spec.ts  10 passed (권한 상승 재시도; reduced-motion 수동 진행 포함)
-WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/learner-improvements.spec.ts  6 passed, 6 failed (권한 상승 재시도): 신규 summary CTA 6개는 통과했으며 native-select probe=false strict 실패가 6개에서 드러남
-WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e -- e2e/learner-improvements.spec.ts  12 passed (probe=false 환경에서 명시적 opt-in)
-WORKFLOW_E2E_PORT=4174 npm run test:e2e  29 passed, 14 failed (최종 strict 결과: native-select probe=false로 keyboard-mobile·learner·contract·persistence·print의 14개 native-select 경로 실패)
-WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e  43 passed (probe=false 환경에서 명시적 opt-in)
+WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/learner-improvements.spec.ts  7 passed, 6 failed (13 total; strict; native-select probe=false)
+WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e -- e2e/learner-improvements.spec.ts  13 passed (13 total; probe=false 환경에서 명시적 opt-in)
+WORKFLOW_E2E_PORT=4174 npm run test:e2e  30 passed, 14 failed (44 total; strict; native-select probe=false로 14개 경로 실패)
+WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e  44 passed (44 total; probe=false 환경에서 명시적 opt-in)
 git diff --check                     통과
 ```
 
 `npm run check:file-length` 원문은 `Checked 99 source files (max 499 lines).`이며, 499줄은 허용 한도입니다. 현재 최장 파일은 `e2e/fixtures/missionSolutions.ts` 441줄입니다.
 
-관찰 환경의 기본 no-env learner E2E는 6/12, 전체 E2E는 29/43으로 native-select probe=false strict 실패를 드러냈으므로 strict no-env gate는 실패입니다. probe를 화면에 보이는 임시 native select로 바꾸고 실제 Tab/Home/ArrowDown 경로를 재시도했지만 이 macOS headless Chromium에서는 선택 값이 커밋되지 않았습니다. 동일 환경에서 `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`을 명시한 opt-in 실행만 learner 12/12·전체 43/43으로 환경 한정 통과했습니다. 따라서 opt-in 결과를 조건 없는 전체 회귀 PASS로 부르지 않습니다. 일반 sandbox 실행에서는 Playwright Chromium이 `bootstrap_check_in ... Permission denied (1100)`로 시작 직후 종료되었으나, 권한 상승 환경에서 위 실행을 재확인했습니다. 이 MachPort 오류는 앱 assertion 실패와 분리해 기록하며, 기본 4173 포트 점유 프로세스는 종료하지 않았습니다.
+관찰 환경의 기본 no-env learner E2E는 13개 중 7 passed/6 failed, 전체 E2E는 44개 중 30 passed/14 failed로 native-select probe=false strict 실패를 드러냈으므로 strict no-env gate는 실패입니다. 14개 실패는 이 macOS headless Chromium 환경에서 실제 native select가 Tab/Home/ArrowDown 키 선택을 커밋하지 않는 환경 한계이며 앱 assertion 실패가 아닙니다. 동일 환경에서 `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`을 명시한 opt-in 실행은 learner 13/13·전체 44/44로 환경 한정 통과했습니다. 따라서 opt-in 결과를 조건 없는 전체 회귀 PASS 또는 strict PASS로 부르지 않습니다. 일반 sandbox 실행에서는 Playwright Chromium이 `bootstrap_check_in ... Permission denied (1100)`로 시작 직후 종료되었으나, 권한 상승 환경에서 위 실행을 재확인했습니다. 이 MachPort 오류는 앱 assertion 실패와 분리해 기록하며, 기본 4173 포트 점유 프로세스는 종료하지 않았습니다.
 
 정적 검사와 E2E의 상태는 분리해 기록합니다. 일반 sandbox에서 같은 MachPort 오류가 재현되면 권한이 허용된 CI 또는 브라우저 세션에서 아래 명령을 실행합니다.
 
