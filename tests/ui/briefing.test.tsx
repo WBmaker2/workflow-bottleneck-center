@@ -8,6 +8,19 @@ import { ModalDialog } from "../../src/components/ModalDialog";
 
 expect.extend(axeMatchers);
 
+it("progressively reveals the learner briefing", () => {
+  render(<App />);
+  expect(screen.getAllByTestId("task-summary-item")).toHaveLength(6);
+
+  const details = [...document.querySelectorAll<HTMLDetailsElement>(".task-card-list details")];
+  expect(details).toHaveLength(6);
+  expect(details[0]).toHaveAttribute("open");
+  expect(details.slice(1).every((detail) => !detail.open)).toBe(true);
+  expect(screen.getByRole("button", { name: "조건 확인" })).toBeVisible();
+  expect(screen.getByText(/이 버튼을 누르면 관계 연결로 이동/)).toBeVisible();
+  expect(screen.getAllByText(/모든 시간은 교육용/)).toHaveLength(1);
+});
+
 function CallbackChangingDialog({ version = 1 }: { version?: number }) {
   const [open, setOpen] = useState(false);
   return (
@@ -53,8 +66,10 @@ function InertDialog({ existingInert = false }: { existingInert?: boolean }) {
   );
 }
 
-it("shows every task-card judgment field before confirmation", () => {
+it("shows every task-card judgment field after opening its summary", async () => {
+  const user = userEvent.setup();
   render(<App />);
+  await user.click(screen.getByText("글과 그림 부착", { selector: ".task-card__summary-title" }));
   const card = screen.getByRole("article", { name: "글과 그림 부착" });
   expect(within(card).getByText("예상 시간 2단위")).toBeVisible();
   expect(within(card).getByText(/먼저: 글 인쇄, 그림 배치 준비/)).toBeVisible();

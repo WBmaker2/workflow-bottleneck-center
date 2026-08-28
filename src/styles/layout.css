@@ -77,6 +77,10 @@ nav button {
   max-width: var(--reading-width);
 }
 
+.briefing-screen > .required-action {
+  justify-self: start;
+}
+
 .stage-layout,
 .schedule-editor,
 .relation-board {

@@ -43,7 +43,7 @@ function AppShell() {
     <main aria-labelledby="app-title">
       <h1 id="app-title" tabIndex={-1} data-stage-heading aria-describedby="current-stage-label">작업 순서 병목 해결소</h1>
       <span id="current-stage-label" className="visually-hidden">현재 단계 {stageLabels[attempt.stage]}</span>
-      <p className="app-disclaimer">모든 시간은 교육용 가상 시간 단위이며 실제 작업 시간을 예측하지 않습니다.</p>
+      {attempt.stage !== "briefing" && <p className="app-disclaimer">모든 시간은 교육용 가상 시간 단위이며 실제 작업 시간을 예측하지 않습니다.</p>}
       <nav className="no-print" aria-label="시나리오 선택">
         <ul>
           {scenarioCatalog.map((item) => (

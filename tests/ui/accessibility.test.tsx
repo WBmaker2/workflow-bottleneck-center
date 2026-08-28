@@ -118,6 +118,16 @@ describe("accessible learning shell", () => {
     expect(document.querySelectorAll('[tabindex]:not([tabindex="-1"]):not([tabindex="0"])')).toHaveLength(0);
   });
 
+  it("names the briefing summary controls and keeps one required pulse", () => {
+    renderAtStage("briefing");
+    expect(screen.getByRole("heading", { name: "작업 핵심 조건 요약" })).toBeInTheDocument();
+    const summaries = [...document.querySelectorAll(".task-card-list details > summary")];
+    expect(summaries).toHaveLength(primaryScenario.tasks.length);
+    expect(summaries.every((summary) => summary.textContent?.trim())).toBe(true);
+    expect(screen.getByRole("button", { name: "조건 확인" })).toHaveAccessibleName("조건 확인");
+    expect(document.querySelectorAll('[data-pulse="true"]')).toHaveLength(1);
+  });
+
   it.each(stages)("%s does not render empty live regions", (stage) => {
     renderAtStage(stage);
     const emptyLiveRegions = [...document.querySelectorAll<HTMLElement>("[aria-live]")].filter((element) => !element.textContent?.trim());

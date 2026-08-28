@@ -4,6 +4,7 @@ import type { AppAction, MissionAttempt } from "../../app/appTypes";
 import type { ScenarioDefinition } from "../../domain/types";
 import { RequiredActionButton } from "../../components/RequiredActionButton";
 import { TaskCard } from "./TaskCard";
+import { TaskCardSummary } from "./TaskCardSummary";
 
 export interface BriefingScreenProps {
   scenario: ScenarioDefinition;
@@ -30,12 +31,13 @@ export function BriefingScreen({ scenario, attempt, dispatch }: BriefingScreenPr
         <p>이 시간은 유일한 정답이 아닌 목표입니다. 안전·품질 조건을 지키는 여러 일정이 가능합니다.</p>
         <ul><li>모든 작업을 빠뜨리지 않고 완료합니다.</li><li>공개된 안전 조건과 품질 조건을 지킵니다.</li><li>사람과 제한 자원을 살피며 협력합니다.</li></ul>
       </section>
-      <p className="virtual-time-disclaimer">{scenario.disclaimer}</p>
+      <TaskCardSummary scenario={scenario} />
+      <p className="virtual-time-disclaimer">{`${scenario.disclaimer.replace("교육용 가상 단위", "교육용 가상 시간 단위")} 이 버튼을 누르면 관계 연결로 이동합니다.`}</p>
+      <RequiredActionButton actionId="confirm-conditions" activeActionId={activeActionId} onClick={confirmConditions}>조건 확인</RequiredActionButton>
       <section aria-labelledby="task-cards-title">
         <h3 id="task-cards-title">작업 카드</h3>
-        <div className="task-card-list">{scenario.tasks.map((task) => <TaskCard key={task.id} task={task} scenario={scenario} />)}</div>
+        <div className="task-card-list">{scenario.tasks.map((task, index) => <TaskCard key={task.id} task={task} scenario={scenario} defaultOpen={index === 0} />)}</div>
       </section>
-      <RequiredActionButton actionId="confirm-conditions" activeActionId={activeActionId} onClick={confirmConditions}>조건 확인</RequiredActionButton>
     </section>
   );
 }
