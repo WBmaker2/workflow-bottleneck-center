@@ -71,6 +71,20 @@ describe("accessible relationship design", () => {
     expect(after).toHaveValue("attach-materials");
   });
 
+  it("restores error focus on a second invalid validation after the relation list changes", async () => {
+    const user = userEvent.setup();
+    const invalidEdge = { beforeTaskId: "verify-content", afterTaskId: "prepare-print-file" } as const;
+    renderRelationScreen([invalidEdge, invalidEdge]);
+
+    await user.click(screen.getByRole("button", { name: "관계 확인" }));
+    const alert = screen.getByRole("alert");
+    expect(document.activeElement).toBe(alert);
+
+    await user.click(screen.getAllByRole("button", { name: "자료 확인과 인쇄 글 정리 관계 삭제" })[0]!);
+    await user.click(screen.getByRole("button", { name: "관계 확인" }));
+    expect(document.activeElement).toBe(screen.getByRole("alert"));
+  });
+
   it("renders an aria-hidden multimodal graph with semantic kind labels", () => {
     const scenario = getScenario("science-display");
     const edges = requiredEdgesFromScenario(scenario);

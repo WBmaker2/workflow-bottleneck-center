@@ -78,3 +78,21 @@ npx playwright test --config=/private/tmp/wbc-playwright.config.ts e2e/learner-i
 - Vitest 실행 중 기존 jsdom canvas `getContext()` 미구현 경고가 출력되지만 테스트 실패는 아닙니다.
 - 4173 포트 점유로 기본 E2E 명령은 실행하지 못했고 동일 preview를 4174에서 검증했습니다.
 - VoiceOver, 학생 음성, 외부 기능, push·배포·HVC 등록은 요청 범위 밖이라 수행하지 않았습니다.
+
+## 수정 라운드 1
+
+리뷰에서 지적된 두 Important finding을 수정했습니다.
+
+- `src/features/relations/RelationScreen.tsx`: `validationAttempt` 카운터를 추가했습니다. invalid 상태가 그대로여도 `관계 확인` 클릭마다 카운터가 증가하고 오류 summary focus effect가 다시 실행됩니다. 기존 validator와 관계 edge 의미는 변경하지 않았습니다.
+- `tests/ui/relations.test.tsx`: 첫 invalid 확인 후 focus를 확인하고, 관계 하나를 삭제해 목록이 바뀐 뒤 두 번째 invalid 확인에서도 같은 alert focus가 복원되는 회귀 테스트를 추가했습니다.
+- `e2e/learner-improvements.spec.ts`: zero-edge 컨트롤 순회를 제거했습니다. 375px에서 실제 관계를 하나 추가해 삭제 버튼이 생성되는 것을 확인하고, `관계 연결` 추가 버튼과 생성된 삭제 버튼을 각각 44px 이상으로 측정합니다. 필수 문장 목록·숨김 SVG·수평 overflow assertion은 유지했습니다.
+
+TDD/검증 명령과 결과:
+
+1. RED: `npm test -- tests/ui/relations.test.tsx -t "restores error focus"`에서 두 번째 확인 후 active element가 alert가 아니어서 1개 실패했습니다.
+2. 구현 후 `npm test -- tests/ui/relations.test.tsx -t "restores error focus"`: 1 passed.
+3. `npm test -- tests/ui/relations.test.tsx`: 12 passed.
+4. 첫 E2E 시도는 `getByLabelText` Playwright API 타입 오류로 중단되었고 `getByLabel`로 교정했습니다.
+5. `npm run build && npx playwright test --config=/private/tmp/wbc-playwright.config.ts e2e/learner-improvements.spec.ts`: build passed, 3 E2E passed.
+
+수정 라운드 1 우려: 기본 4173 포트 점유 때문에 기존과 같이 임시 4174 preview 설정으로 E2E를 실행했습니다. jsdom canvas `getContext()` 미구현 경고는 기존과 동일하며 테스트 실패가 아닙니다.

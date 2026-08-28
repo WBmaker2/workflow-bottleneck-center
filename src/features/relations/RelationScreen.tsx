@@ -39,6 +39,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
   const validation = validateRelationMap(scenario, edges);
   const [announcement, setAnnouncement] = useState("");
   const [hasValidated, setHasValidated] = useState(false);
+  const [validationAttempt, setValidationAttempt] = useState(0);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   const errorSummaryRef = useRef<HTMLElement>(null);
   const previousCount = useRef(edges.length);
@@ -54,7 +55,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
 
   useEffect(() => {
     if (hasValidated && validation.status === "invalid") errorSummaryRef.current?.focus();
-  }, [hasValidated, validation.status]);
+  }, [hasValidated, validation.status, validationAttempt]);
 
   const addOrRemove = (nextEdges: readonly DependencyEdge[]) => {
     if (onChange) onChange(nextEdges);
@@ -63,6 +64,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
   const continueToSchedule = () => {
     setHasValidated(true);
     if (validation.status === "invalid") {
+      setValidationAttempt((current) => current + 1);
       return;
     }
     if (onContinue) onContinue();

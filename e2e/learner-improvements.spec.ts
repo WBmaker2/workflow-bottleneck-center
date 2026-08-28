@@ -36,7 +36,14 @@ test("375px relations show the required meaning list before the helper graph", a
   expect(await page.locator(".relation-requirement-list li").count()).toBeGreaterThan(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(await page.evaluate(() => document.documentElement.clientWidth));
 
-  for (const button of await page.locator(".relation-list button, .relation-editor button").all()) {
+  await page.getByLabel("먼저 끝낼 작업").selectOption("verify-content");
+  await page.getByLabel("다음에 시작할 작업").selectOption("prepare-print-file");
+  await page.getByRole("button", { name: "관계 연결" }).click();
+  const deleteButton = page.getByRole("button", { name: "자료 확인과 인쇄 글 정리 관계 삭제" });
+  await expect(page.locator(".relation-list")).toContainText("자료 확인 다음에 인쇄 글 정리");
+  await expect(deleteButton).toBeVisible();
+
+  for (const button of [page.getByRole("button", { name: "관계 연결" }), deleteButton]) {
     expect((await button.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   }
 });
