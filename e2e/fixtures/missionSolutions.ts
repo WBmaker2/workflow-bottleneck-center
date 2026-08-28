@@ -325,7 +325,12 @@ const tabTo = async (page: Page, target: Locator, direction: "forward" | "backwa
   const key = direction === "forward" ? "Tab" : "Shift+Tab";
   for (let attempt = 0; attempt < 160; attempt += 1) {
     if (await target.evaluate((element) => element === document.activeElement)) {
-      if (direction === "backward" && options.stepAwayFromTarget) await page.keyboard.press("Shift+Tab");
+      if (direction === "backward" && options.stepAwayFromTarget) {
+        await page.keyboard.press("Shift+Tab");
+        expect(await target.evaluate((element) => element !== document.activeElement)).toBe(true);
+        return;
+      }
+      expect(await target.evaluate((element) => element === document.activeElement)).toBe(true);
       return;
     }
     await page.keyboard.press(key);
@@ -351,10 +356,13 @@ const pressCheckableByTab = async (page: Page, locator: Locator): Promise<void> 
 };
 const chooseSelectValueByTab = async (page: Page, label: string, value: string): Promise<void> => {
   const select = page.getByLabel(label);
-  await tabTo(page, select);
+  // Run the host probe before entering the first real select, because removing
+  // its temporary select intentionally returns focus to the document body.
   const nativeSelectSupported = await getNativeSelectSupport(page);
+  await tabTo(page, select);
   const optionExists = await select.evaluate((element, wanted) => Array.from((element as HTMLSelectElement).options).some((option) => option.value === wanted), value);
   if (!optionExists) throw new Error(`Option ${value} is missing from ${label}`);
+  expect(await select.evaluate((element) => element === document.activeElement)).toBe(true);
   await page.keyboard.press("Home");
   for (let step = 0; step < 40; step += 1) {
     if (await select.inputValue() === value) break;
@@ -362,7 +370,8 @@ const chooseSelectValueByTab = async (page: Page, label: string, value: string):
   }
   await page.keyboard.press("Tab");
   if (await select.inputValue() !== value) {
-    if (nativeSelectSupported || process.env.WORKFLOW_E2E_ALLOW_SELECT_FALLBACK !== "1") {
+    const fallbackAllowed = !nativeSelectSupported && process.env.WORKFLOW_E2E_ALLOW_SELECT_FALLBACK === "1";
+    if (!fallbackAllowed) {
       throw new Error(`Native select keyboard input did not commit ${label}=${value} (probe=${nativeSelectSupported}). Set WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 only after the probe detects this environment quirk.`);
     }
     await select.selectOption(value);

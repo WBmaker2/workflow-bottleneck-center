@@ -257,6 +257,7 @@ npm test
 npm run check:file-length
 npm run build
 WORKFLOW_E2E_PORT=4174 npm run test:e2e
+WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e # probe=false 호스트의 명시적 opt-in 재실행
 git diff --check
 ```
 

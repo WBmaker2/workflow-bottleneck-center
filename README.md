@@ -67,10 +67,12 @@ npm run dev
 npm run test
 npm run test:e2e
 WORKFLOW_E2E_PORT=4174 npm run test:e2e
+WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e  # native-select probe=false 환경의 명시적 opt-in
 npm run verify
 ```
 
 개발 서버는 기본적으로 Vite 주소 `http://127.0.0.1:5173`에서 열립니다. `npm run test:e2e`는 빌드 후 Chromium으로 Playwright 경로를 실행합니다. 필요하면 한 번 `npx playwright install chromium`으로 브라우저를 설치합니다.
+기본 no-env E2E는 native-select probe 결과를 그대로 드러내며, probe가 실패한 호스트에서만 `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`을 명시합니다. 이 opt-in 결과는 해당 환경에 한정된 보조 증거입니다.
 
 ## 테스트 매트릭스
 
@@ -81,7 +83,7 @@ npm run verify
 | 단위·UI | `npm run test` | 도메인, reducer, 저장, React UI, 아키텍처 가드 |
 | 파일 크기 | `npm run check:file-length` | `src`, `tests`, `e2e`, `scripts` 각 소스 499줄 이하 |
 | 프로덕션 빌드 | `npm run build` | 타입 검사와 Vite `dist` 생성 |
-| 통합 학습 경로 | `WORKFLOW_E2E_PORT=4174 npm run test:e2e` | 네 미션, 키보드·모바일·저장·업데이트 내역·인쇄 |
+| 통합 학습 경로 | `WORKFLOW_E2E_PORT=4174 npm run test:e2e` | 네 미션, 키보드·모바일·저장·업데이트 내역·인쇄; 기본 no-env strict gate |
 | 전체 로컬 검증 | `npm run verify` | lint → typecheck → Vitest → 파일 크기 → build |
 
 `tests/architecture/noExternalServices.test.ts`는 외부 서비스 호출, 개인 식별 필드, 도메인 계층의 브라우저·React 의존, 시뮬레이터의 비결정성, 금지된 경쟁·생산성·휴식 문구, 시나리오 4종, 업데이트 날짜 형식을 고정합니다.

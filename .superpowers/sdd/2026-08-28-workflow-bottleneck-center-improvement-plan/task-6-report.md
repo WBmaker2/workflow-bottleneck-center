@@ -45,22 +45,22 @@ npm run build
 vite build succeeded
 
 WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/learner-improvements.spec.ts
-8 passed, 4 failed: native-select probe failure is reported without fallback (권한 상승 재시도)
+8 passed, 4 failed (26.4s): native-select probe failure is reported without fallback (권한 상승 재시도)
 
 WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e -- e2e/learner-improvements.spec.ts
-12 passed (40.0s, 권한 상승 재시도; probe=false 환경에서 명시적 opt-in)
+12 passed (42.6s, 권한 상승 재시도; probe=false 환경에서 명시적 opt-in)
 
 WORKFLOW_E2E_PORT=4174 npm run test:e2e
-39 passed, 4 failed: all four real-keyboard learner scenarios report the native-select probe failure without fallback (권한 상승 재시도)
+39 passed, 4 failed (56.0s): all four real-keyboard learner scenarios report the native-select probe failure without fallback (권한 상승 재시도)
 
 WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e
-43 passed (57.4s, 권한 상승 재시도; probe=false 환경에서 명시적 opt-in)
+43 passed (54.6s, 권한 상승 재시도; probe=false 환경에서 명시적 opt-in)
 
 git diff --check
 passed
 ```
 
-4173 점유 프로세스는 종료하지 않았습니다. 일반 sandbox의 첫 실행에서는 이 macOS 환경의 Playwright Chromium이 `bootstrap_check_in ... Permission denied (1100)`로 시작 직후 종료되었으나, 권한 상승 재시도에서 learner-improvements 12/12 및 전체 E2E 43/43이 통과했습니다. 초기 오류는 앱 assertion 실패가 아닌 브라우저 호스트 권한 차이였고 최종 결과는 통과로 기록합니다.
+관찰 환경의 기본 no-env learner E2E는 8/12, 전체 E2E는 39/43으로 native-select probe 실패를 드러냈습니다. 따라서 strict no-env gate는 실패입니다. `probe=false`인 동일 환경에서 `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`을 명시한 opt-in 실행만 learner 12/12·전체 43/43으로 환경 한정 통과했으며, 이를 조건 없는 전체 회귀 통과로 해석하지 않습니다. 4173 점유 프로세스는 종료하지 않았습니다. 일반 sandbox의 첫 실행에서는 이 macOS 환경의 Playwright Chromium이 `bootstrap_check_in ... Permission denied (1100)`로 시작 직후 종료되었으나, 권한 상승 재시도에서 위 두 조건을 확인했습니다. 이 MachPort 오류는 앱 assertion 실패와 분리해 기록합니다.
 
 ## 파일 길이·범위
 
@@ -71,7 +71,7 @@ passed
 변경 파일만 아래 로컬 커밋으로 기록합니다.
 
 ```text
-test: record learner usability regression gates
+test: harden real keyboard select probe gate
 ```
 
 push·배포·HVC 등록은 수행하지 않았습니다.
