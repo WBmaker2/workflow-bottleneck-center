@@ -41,6 +41,7 @@ test("375px relations show the required meaning list before the helper graph", a
   await page.getByRole("button", { name: "관계 연결" }).click();
   const deleteButton = page.getByRole("button", { name: "자료 확인과 인쇄 글 정리 관계 삭제" });
   await expect(page.locator(".relation-list")).toContainText("자료 확인 다음에 인쇄 글 정리");
+  await expect(deleteButton).toHaveCount(1);
   await expect(deleteButton).toBeVisible();
 
   for (const button of [page.getByRole("button", { name: "관계 연결" }), deleteButton]) {

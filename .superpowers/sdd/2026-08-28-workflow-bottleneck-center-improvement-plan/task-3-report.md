@@ -96,3 +96,18 @@ TDD/검증 명령과 결과:
 5. `npm run build && npx playwright test --config=/private/tmp/wbc-playwright.config.ts e2e/learner-improvements.spec.ts`: build passed, 3 E2E passed.
 
 수정 라운드 1 우려: 기본 4173 포트 점유 때문에 기존과 같이 임시 4174 preview 설정으로 E2E를 실행했습니다. jsdom canvas `getContext()` 미구현 경고는 기존과 동일하며 테스트 실패가 아닙니다.
+
+## 수정 라운드 2
+
+리뷰에서 요청한 E2E 정밀 assertion을 추가했습니다.
+
+- `e2e/learner-improvements.spec.ts`: 관계를 생성한 뒤 exact `자료 확인과 인쇄 글 정리 관계 삭제` locator가 정확히 1개인지 `toHaveCount(1)`로 확인합니다. 기존 의미 목록·hidden graph·수평 overflow·44px height assertion은 유지했습니다.
+
+검증:
+
+```text
+npx playwright test --config=/private/tmp/wbc-playwright.config.ts e2e/learner-improvements.spec.ts
+3 passed
+```
+
+수정 라운드 2 우려: 기본 4173 포트 점유로 임시 4174 preview 설정을 사용했습니다. push·배포·HVC 등록은 하지 않았습니다.
