@@ -253,7 +253,7 @@
 
 .timeline-grid-scroll-hint {
   color: var(--color-ink-muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -262,7 +262,7 @@
 .timeline-role-note {
   margin-bottom: 0;
   color: var(--color-ink-muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 @media (min-width: 601px) {

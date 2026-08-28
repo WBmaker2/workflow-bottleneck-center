@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { createInitialState } from "../src/app/appReducer";
+import { scenarioCatalog } from "../src/data/scenarios";
+import { requiredEdgesFromScenario } from "../src/domain/scenarioValidation";
+import { encodeProgress } from "../src/storage/progressCodec";
 
 test("375px briefing keeps the first action within the opening viewport flow", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
@@ -47,4 +51,34 @@ test("375px relations show the required meaning list before the helper graph", a
   for (const button of [page.getByRole("button", { name: "관계 연결" }), deleteButton]) {
     expect((await button.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   }
+});
+
+test("375px schedule starts with the step list without document overflow", async ({ page }) => {
+  const scenario = scenarioCatalog.find(({ id }) => id === "science-display")!;
+  const draft = {
+    entries: scenario.tasks.map((task) => ({
+      taskId: task.id,
+      plannedStart: 0,
+      roleIds: scenario.roles.slice(0, task.peopleRequired).map(({ id }) => id),
+    })),
+    learnerEdges: requiredEdgesFromScenario(scenario),
+  };
+  const initial = createInitialState();
+  const attempt = initial.attempts[scenario.id]!;
+  const progress = encodeProgress({
+    ...initial,
+    selectedScenarioId: scenario.id,
+    attempts: {
+      ...initial.attempts,
+      [scenario.id]: { ...attempt, stage: "schedule", conditionsAcknowledged: true, relationEdges: draft.learnerEdges, draftSchedule: draft },
+    },
+  });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: "workflow-bottleneck-center:progress:v1", value: JSON.stringify(progress) });
+  await page.goto("./");
+
+  await expect(page.getByRole("heading", { name: "일정표", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "단계 목록 보기" })).toBeVisible();
+  await expect(page.getByRole("grid")).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth));
 });

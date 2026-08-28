@@ -93,7 +93,9 @@ for (const stage of stages) {
     const ownedScreen = page.locator(stageOwnedScreen[stage].selector);
     await expect(ownedScreen).toBeVisible();
     await expect(ownedScreen.getByRole("heading", { name: stageOwnedScreen[stage].heading })).toBeVisible();
-    await expect(page.getByRole("button", { name: "업데이트 내역" })).toBeInViewport();
+    const updateTrigger = page.getByRole("button", { name: "업데이트 내역" });
+    await expect(page.locator("footer.app-footer")).toContainText("업데이트 내역");
+    await expect(updateTrigger).toHaveCSS("position", "static");
     await expect(page.getByRole("button", { name: /단계 목록 보기|요약 보기/ }).first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 

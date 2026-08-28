@@ -70,3 +70,32 @@ Responsive E2E의 7개 실패는 모든 375px stage에서 공통으로 `업데�
 - 375px 전체 responsive E2E는 위 기존 공통 in-viewport assertion 때문에 완료되지 않았습니다. Task 6에서 전체 E2E를 확장·정리할 때 함께 재검증해야 합니다.
 - 명시적 grid 전환 시 시간축 안내는 제공하지만, 현재 요청대로 34rem 최소 폭은 데스크톱 media query에만 적용했습니다.
 - VoiceOver, 음성 기능, 외부 기능, domain/save 변경, push·배포·HVC 등록은 수행하지 않았습니다.
+
+## 수정 라운드 1
+
+리뷰에서 지적한 세 가지 구현·검증 문제를 수정했습니다.
+
+- `src/features/schedule/ScheduleEditor.tsx`: 일정 보기 switcher를 PlacementForm보다 먼저 렌더링해 Tab 순서를 switch 두 버튼 → 작업 → 시작 시점 → 담당 역할로 맞췄습니다. 기존 switch 상태와 `aria-pressed`는 유지했습니다.
+- `tests/ui/schedule.test.tsx`: 실제 `user.tab()`으로 시간표 보기, 단계 목록 보기, 작업 select, 시작 select, 역할 A의 focus 순서를 확인하고 역할 A를 Space로 선택합니다. Arrow 키가 값을 바꾼다고 주장하는 assertion은 제거했습니다.
+- `e2e/accessibility-responsive.spec.ts`: 기존 `업데이트 내역` viewport assertion을 static footer 존재·`position: static` 검증으로 바꿨습니다.
+- `e2e/learner-improvements.spec.ts`: `encodeProgress` 기반 schedule-stage fixture를 추가하고 `page.goto("./")`, 375px 목록 기본값, grid 부재, document scrollWidth ≤ clientWidth를 검증합니다.
+- `src/styles/components.css`: 네 가지 새 학습자 안내 문구의 글자 크기를 `1rem`으로 올렸습니다.
+
+수정 라운드 검증:
+
+```text
+npm test -- --run tests/ui/schedule.test.tsx
+Test Files  1 passed (1)
+Tests       23 passed (23)
+
+npm run typecheck && npm run lint && npm run check:file-length
+all passed; Checked 94 source files (max 499 lines)
+
+npm run test:e2e -- e2e/learner-improvements.spec.ts e2e/accessibility-responsive.spec.ts
+build passed; initial run had 1 stale exact-name locator failure in the new schedule assertion
+
+npx playwright test e2e/learner-improvements.spec.ts e2e/accessibility-responsive.spec.ts
+14 passed (14)
+```
+
+남은 우려: Vitest의 기존 jsdom canvas `getContext()` 미구현 경고는 남아 있으나 실패가 아닙니다. VoiceOver, 음성 기능, 외부 기능, domain/save 변경, push·배포·HVC 등록은 여전히 범위 밖입니다.
