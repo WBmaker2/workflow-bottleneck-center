@@ -16,14 +16,11 @@ const evidenceExamples: Record<(typeof evidenceFields)[number], string> = {
   bottleneckExplanation: "프린터를 기다려 글 인쇄가 2단위 늦어졌어요. 뒤 작업도 함께 늦어졌어요.",
   tradeoffExplanation: "순서를 바꾸어도 안전·품질·역할 공정성을 지키는 방법을 골랐어요.",
 };
-const nextFieldLabels: Record<(typeof evidenceFields)[number], string> = {
-  dependencyExplanation: "선행 작업 선택",
-  parallelExplanation: "함께 할 첫 작업",
-  bottleneckExplanation: "병목 원인 선택",
-  tradeoffExplanation: "바꾼 작업 선택",
-};
-
 type EvidenceField = keyof MissionAttempt["evidence"];
+export interface EvidenceStep {
+  label: string;
+  complete: boolean;
+}
 type FormState = {
   dependencyBefore: string; dependencyAfter: string; dependencyReason: string; dependencyText: string;
   parallelFirst: string; parallelSecond: string; parallelReason: string; parallelText: string;
@@ -118,6 +115,38 @@ export const EvidenceForm = forwardRef<EvidenceFormHandle, EvidenceFormProps>(fu
     return values;
   }, {} as Record<EvidenceField, string>);
   const completedEvidenceCount = evidenceFields.filter((field) => evidenceValues[field].trim().length >= 10).length;
+  const firstIncompleteStep = (steps: readonly EvidenceStep[]): string => steps.find((step) => !step.complete)?.label ?? "이 근거는 완성했습니다.";
+  const evidenceSteps: Record<EvidenceField, readonly EvidenceStep[]> = {
+    dependencyExplanation: [
+      { label: "선행 작업 선택", complete: Boolean(form.dependencyBefore) },
+      { label: "시작 작업 선택", complete: Boolean(form.dependencyAfter) },
+      { label: "선행 이유 선택", complete: Boolean(form.dependencyReason) },
+      { label: "선행 관계 설명", complete: Boolean(form.dependencyText.trim()) },
+    ],
+    parallelExplanation: [
+      { label: "함께 할 첫 작업", complete: Boolean(form.parallelFirst) },
+      { label: "함께 할 둘째 작업", complete: Boolean(form.parallelSecond) },
+      { label: "병렬 이유 선택", complete: Boolean(form.parallelReason) },
+      { label: "병렬 관계 설명", complete: Boolean(form.parallelText.trim()) },
+    ],
+    bottleneckExplanation: findings.length === 0 ? [
+      { label: "기다림을 설명할 작업 선택", complete: Boolean(form.bottleneckTaskId) },
+      { label: "기다림 단위 선택", complete: form.bottleneckUnits === "0" },
+      { label: "병목 근거 설명", complete: Boolean(form.bottleneckText.trim()) },
+    ] : [
+      { label: "병목 원인 선택", complete: Boolean(form.bottleneckFindingId) },
+      { label: "기다림 단위 선택", complete: Boolean(form.bottleneckUnits) && selectedFinding !== undefined && Number(form.bottleneckUnits) === selectedFinding?.delayUnits },
+      { label: "병목 근거 설명", complete: Boolean(form.bottleneckText.trim()) },
+    ],
+    tradeoffExplanation: [
+      { label: "바꾼 작업 선택", complete: Boolean(form.tradeoffTask) },
+      { label: "수정 전략 선택", complete: Boolean(form.tradeoffStrategy) },
+      { label: "시간/대기 변화 선택", complete: Boolean(form.tradeoffChange) },
+      { label: "조건 결과 선택", complete: Boolean(form.tradeoffCondition) },
+      { label: "절충 근거 설명", complete: Boolean(form.tradeoffText.trim()) },
+    ],
+  };
+  const nextHint = (field: EvidenceField): string => evidenceValues[field] ? "이 근거는 완성했습니다." : firstIncompleteStep(evidenceSteps[field]);
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     const next = { ...form, [key]: value };
     setForm(next);
@@ -167,28 +196,29 @@ export const EvidenceForm = forwardRef<EvidenceFormHandle, EvidenceFormProps>(fu
       <legend>선행 관계 근거</legend>
       <p>___ 작업이 끝나야 ___ 작업을 시작할 수 있는 이유는 ___입니다.</p>
       <p className="evidence-example">예시: {evidenceExamples.dependencyExplanation}</p>
-      <p className="evidence-next">다음에 채울 칸: {evidenceValues.dependencyExplanation ? "이 근거는 완성했습니다." : nextFieldLabels.dependencyExplanation}</p>
+      <p className="evidence-next">다음에 채울 칸: {nextHint("dependencyExplanation")}</p>
       {saved("dependencyExplanation")}{taskSelect("선행 작업 선택", form.dependencyBefore, "dependencyBefore")}{taskSelect("시작 작업 선택", form.dependencyAfter, "dependencyAfter")}{reasonSelect("선행 이유 선택", dependencyReasons, form.dependencyReason, "dependencyReason")}{reasoning("선행 관계 설명", form.dependencyText, "dependencyText")}
     </fieldset>
     <fieldset>
       <legend>병렬 관계 근거</legend>
       <p>___ 작업과 ___ 작업을 함께 할 수 있는 이유는 ___입니다.</p>
       <p className="evidence-example">예시: {evidenceExamples.parallelExplanation}</p>
-      <p className="evidence-next">다음에 채울 칸: {evidenceValues.parallelExplanation ? "이 근거는 완성했습니다." : nextFieldLabels.parallelExplanation}</p>
+      <p className="evidence-next">다음에 채울 칸: {nextHint("parallelExplanation")}</p>
       {saved("parallelExplanation")}{taskSelect("함께 할 첫 작업", form.parallelFirst, "parallelFirst")}{taskSelect("함께 할 둘째 작업", form.parallelSecond, "parallelSecond")}{reasonSelect("병렬 이유 선택", parallelReasons, form.parallelReason, "parallelReason")}{reasoning("병렬 관계 설명", form.parallelText, "parallelText")}{form.parallelFirst && form.parallelSecond && !parallelValid(form) && <p className="evidence-validation">필수 선행 경로가 있는 두 작업은 함께 할 수 없습니다.</p>}
     </fieldset>
     <fieldset>
-      <legend>{learnerCopy.analysisTerms.cause} 근거</legend>
+      <legend>병목 근거</legend>
+      <p className="evidence-learner-term">{learnerCopy.analysisTerms.cause}: 어떤 원인 때문에 뒤 작업이 기다렸는지 적어 보세요.</p>
       <p>___ 때문에 ___ 작업이 ___단위 기다렸습니다.</p>
       <p className="evidence-example">예시: {evidenceExamples.bottleneckExplanation}</p>
-      <p className="evidence-next">다음에 채울 칸: {evidenceValues.bottleneckExplanation ? "이 근거는 완성했습니다." : nextFieldLabels.bottleneckExplanation}</p>
+      <p className="evidence-next">다음에 채울 칸: {nextHint("bottleneckExplanation")}</p>
       {saved("bottleneckExplanation")}{findings.length === 0 ? <><p>이번 실행에는 표시된 병목과 기다림이 없습니다.</p>{taskSelect("기다림을 설명할 작업 선택", form.bottleneckTaskId, "bottleneckTaskId")}<p>표시된 기다림: 0단위</p><label>기다림 단위 선택<select aria-label="기다림 단위 선택" value={form.bottleneckUnits} onChange={(event) => update("bottleneckUnits", event.target.value)}><option value="0">0단위</option></select></label></> : <><label>병목 원인 선택<select aria-label="병목 원인 선택" value={form.bottleneckFindingId} onChange={(event) => update("bottleneckFindingId", event.target.value)}><option value="">선택하세요</option>{findings.map((finding) => <option key={finding.id} value={finding.id}>{finding.blockerLabel} · {titleFor(scenario, finding.blockedTaskId)}</option>)}</select></label>{selectedFinding && <p>표시된 실제 지연: {selectedFinding.delayUnits}단위</p>}<label>기다림 단위 선택<select aria-label="기다림 단위 선택" value={form.bottleneckUnits} onChange={(event) => update("bottleneckUnits", event.target.value)}><option value="">선택하세요</option>{Array.from({ length: Math.max(6, ...findings.map((finding) => finding.delayUnits + 2)) }, (_, index) => <option value={index} key={index}>{index}단위</option>)}</select></label></>}{reasoning("병목 근거 설명", form.bottleneckText, "bottleneckText")}
     </fieldset>
     <fieldset>
       <legend>절충 근거</legend>
       <p>___을 바꾸어 시간/대기가 ___했고, 안전·품질·역할 공정성은 ___했습니다.</p>
       <p className="evidence-example">예시: {evidenceExamples.tradeoffExplanation}</p>
-      <p className="evidence-next">다음에 채울 칸: {evidenceValues.tradeoffExplanation ? "이 근거는 완성했습니다." : nextFieldLabels.tradeoffExplanation}</p>
+      <p className="evidence-next">다음에 채울 칸: {nextHint("tradeoffExplanation")}</p>
       {saved("tradeoffExplanation")}{taskSelect("바꾼 작업 선택", form.tradeoffTask, "tradeoffTask")}<label>수정 전략 선택<select aria-label="수정 전략 선택" value={form.tradeoffStrategy} onChange={(event) => update("tradeoffStrategy", event.target.value)}><option value="">선택하세요</option>{strategies.map((strategy) => <option value={strategy} key={strategy}>{strategy}</option>)}</select></label>{reasonSelect("시간/대기 변화 선택", changes, form.tradeoffChange, "tradeoffChange")}{reasonSelect("조건 결과 선택", ["지켰", "지키지 못했"], form.tradeoffCondition, "tradeoffCondition")}{reasoning("절충 근거 설명", form.tradeoffText, "tradeoffText")}
     </fieldset>
     {message && <p className="evidence-status" role="status" aria-live="polite" aria-atomic="true">{message}</p>}

@@ -61,11 +61,11 @@ export function AnalysisScreen({ scenario, snapshot, prediction, predictionExpla
         }}
       />
       {selectedFinding && <section className="selected-finding" aria-labelledby="selected-finding-title">
-        <h3 id="selected-finding-title">{learnerCopy.analysisTerms.cause}</h3>
+        <h3 id="selected-finding-title">선택한 {learnerCopy.analysisTerms.cause}</h3>
         <p><b>원인</b> {selectedFinding.blockerLabel}</p>
         <p><b>실제 지연</b> {selectedFinding.delayUnits}단위</p>
         <p><b>설명</b> {selectedFinding.explanation}</p>
-        <p><b>인과·영향 경로</b> {taskPath}</p>
+        <p><b>{learnerCopy.analysisTerms.path}</b> {taskPath}</p>
       </section>}
       <section className="prediction-record" aria-labelledby="prediction-record-title">
         <h3 id="prediction-record-title">{learnerCopy.analysisTerms.prediction}</h3>

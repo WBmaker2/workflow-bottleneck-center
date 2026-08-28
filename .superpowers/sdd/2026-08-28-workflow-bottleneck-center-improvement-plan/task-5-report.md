@@ -77,3 +77,8 @@
 - 전체 `npm run test:e2e`에는 기존 fixture의 strict heading selector 충돌(단계 도움말과 실제 heading이 함께 `getByRole(..., { name: ... })`에 매칭)과 기존 persistence selector 충돌이 남아 있습니다. 변경 후 직접 관련된 375px analysis/report 및 print 테스트는 통과했습니다.
 - 테스트 출력에 jsdom의 기존 `HTMLCanvasElement.getContext()` 미구현 경고가 반복되지만 실패 원인은 아닙니다.
 - 커밋 후 push/deploy/HVC 등록은 요청대로 하지 않았습니다.
+
+## Fix round 1 historical note
+
+- 이전 라운드에서 병목 fieldset legend를 학습자 용어로 바꾸면서 `e2e/keyboard-mobile.spec.ts`가 찾는 `병목 근거` selector가 깨졌습니다. 이번 라운드에서 legend를 정확히 `병목 근거`로 복원하고 쉬운 용어는 legend 아래 설명으로 이동했습니다.
+- 현재 관련 결과: `npx playwright test e2e/accessibility-responsive.spec.ts --grep '375px (analysis|report)'` 2 passed, `npx playwright test e2e/print-report.spec.ts` 1 passed입니다. `npx playwright test e2e/keyboard-mobile.spec.ts --grep 'science-display'`는 병목 selector 단계 이후 기존 report heading strict 충돌(단계 도움말과 실제 heading 동시 매칭)에서 1 failed이며, 병목 selector 회귀는 재현되지 않았습니다.

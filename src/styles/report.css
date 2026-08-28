@@ -32,9 +32,14 @@
 }
 
 .evidence-example,
-.evidence-next {
+.evidence-next,
+.evidence-learner-term {
   margin-bottom: 0;
   overflow-wrap: anywhere;
+}
+
+.evidence-learner-term {
+  color: var(--color-ink-muted);
 }
 
 .evidence-example {

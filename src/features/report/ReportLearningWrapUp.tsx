@@ -17,8 +17,8 @@ const conditionText = (comparison: AttemptComparison): string => {
 
 export function ReportLearningWrapUp({ scenario, comparison, selectedFinding }: ReportLearningWrapUpProps) {
   const bottleneckLesson = selectedFinding
-    ? `${selectedFinding.blockerLabel} 때문에 ${scenario.tasks.find((task) => task.id === selectedFinding.blockedTaskId)?.title ?? "뒤 작업"}이(가) 기다린 까닭을 찾아보았어요. 병목은 가장 오래 걸린 일이 아니라 ${learnerCopy.reportHints.bottleneck}`
-    : `기다림이 없을 때에도 ${learnerCopy.reportHints.bottleneck} 기록을 살펴보며 흐름을 설명할 수 있어요.`;
+    ? `${selectedFinding.blockerLabel} 때문에 ${scenario.tasks.find((task) => task.id === selectedFinding.blockedTaskId)?.title ?? "뒤 작업"}이(가) 기다린 까닭을 찾아보았어요. 병목은 가장 오래 걸린 일이 아니라 ${learnerCopy.reportHints.bottleneck}이에요.`
+    : "이번 실행에는 기다림을 만든 원인이 없었다는 기록도 흐름을 설명하는 근거예요.";
   const comparisonLesson = comparison
     ? `수정 결과를 보며 시간이 ${comparison.finishDelta <= 0 ? "줄거나 그대로인지" : "늘었는지"}만 보지 않고 ${conditionText(comparison)}을 함께 확인했어요.`
     : "아직 수정 결과를 비교하지 않았어요. 시간과 함께 안전·품질·협력 조건도 살펴보세요.";
