@@ -36,6 +36,8 @@ WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e  43
 git diff --check                     통과
 ```
 
+`npm run check:file-length` 원문은 `Checked 99 source files (max 499 lines).`이며, 499줄은 허용 한도입니다. 현재 최장 파일은 `e2e/fixtures/missionSolutions.ts` 490줄입니다.
+
 관찰 환경의 기본 no-env learner E2E는 8/12, 전체 E2E는 39/43으로 native-select probe 실패를 드러냈으므로 strict no-env gate는 실패입니다. `probe=false`인 동일 환경에서 `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`을 명시한 opt-in 실행만 learner 12/12·전체 43/43으로 환경 한정 통과했습니다. 따라서 opt-in 결과를 조건 없는 전체 회귀 PASS로 부르지 않습니다. 일반 sandbox 실행에서는 Playwright Chromium이 `bootstrap_check_in ... Permission denied (1100)`로 시작 직후 종료되었으나, 권한 상승 환경에서 위 두 실행을 재확인했습니다. 이 MachPort 오류는 앱 assertion 실패와 분리해 기록하며, 기본 4173 포트 점유 프로세스는 종료하지 않았습니다.
 
 정적 검사와 E2E의 상태는 분리해 기록합니다. 일반 sandbox에서 같은 MachPort 오류가 재현되면 권한이 허용된 CI 또는 브라우저 세션에서 아래 명령을 실행합니다.

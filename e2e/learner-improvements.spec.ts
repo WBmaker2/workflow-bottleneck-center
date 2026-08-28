@@ -160,12 +160,16 @@ for (const scenarioId of ["science-display", "library-cart", "class-presentation
     page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
     page.on("pageerror", (error) => pageErrors.push(error.message));
     await page.addInitScript(() => {
-      const trace = { forwardTabs: 0, backwardTabs: 0 };
+      const trace = { forwardTabs: 0, backwardTabs: 0, activationKeys: [] as string[] };
       Object.assign(window, { __workflowKeyboardTrace: trace });
       document.addEventListener("keydown", (event) => {
-        if (event.key !== "Tab") return;
-        if (event.shiftKey) trace.backwardTabs += 1;
-        else trace.forwardTabs += 1;
+        if (event.key === "Tab") {
+          if (event.shiftKey) trace.backwardTabs += 1;
+          else trace.forwardTabs += 1;
+          trace.activationKeys.push(event.shiftKey ? "Shift+Tab" : "Tab");
+        } else if (event.key === "Enter") {
+          trace.activationKeys.push("Enter");
+        }
       }, true);
     });
     await installKeyboardOnlyFailureGuard(page);
@@ -175,10 +179,15 @@ for (const scenarioId of ["science-display", "library-cart", "class-presentation
     await completeMissionByRealKeyboard(page, missionSolutions[scenarioId]);
     await expect(page.getByRole("heading", { name: "개선 보고서", exact: true })).toBeVisible();
     const keyboardTrace = await page.evaluate(() => (window as Window & {
-      __workflowKeyboardTrace?: { forwardTabs: number; backwardTabs: number };
-    }).__workflowKeyboardTrace ?? { forwardTabs: 0, backwardTabs: 0 });
+      __workflowKeyboardTrace?: { forwardTabs: number; backwardTabs: number; activationKeys: string[] };
+    }).__workflowKeyboardTrace ?? { forwardTabs: 0, backwardTabs: 0, activationKeys: [] });
     expect(keyboardTrace.forwardTabs).toBeGreaterThan(0);
     expect(keyboardTrace.backwardTabs).toBeGreaterThan(0);
+    const backwardIndexes = keyboardTrace.activationKeys.flatMap((key, index) => key === "Shift+Tab" ? [index] : []);
+    expect(backwardIndexes.length).toBeGreaterThan(0);
+    for (const index of backwardIndexes) {
+      expect(keyboardTrace.activationKeys.slice(index, index + 3)).toEqual(["Shift+Tab", "Tab", "Enter"]);
+    }
     await page.waitForTimeout(50);
     const origin = new URL(page.url()).origin;
     expect(requests.filter((url) => !url.startsWith(`${origin}/`) && url !== origin)).toEqual([]);

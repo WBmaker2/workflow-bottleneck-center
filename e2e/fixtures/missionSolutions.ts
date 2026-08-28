@@ -320,20 +320,14 @@ export const completeMissionByKeyboard = async (page: Page, solution: MissionSol
 };
 
 // Keyboard-only helpers follow browser tab order; no focus jumps or injected select state.
-const tabTo = async (page: Page, target: Locator, direction: "forward" | "backward" = "forward", options: { stepAwayFromTarget?: boolean } = {}): Promise<void> => {
+const tabTo = async (page: Page, target: Locator): Promise<void> => {
   await expect(target).toHaveCount(1);
-  const key = direction === "forward" ? "Tab" : "Shift+Tab";
   for (let attempt = 0; attempt < 160; attempt += 1) {
     if (await target.evaluate((element) => element === document.activeElement)) {
-      if (direction === "backward" && options.stepAwayFromTarget) {
-        await page.keyboard.press("Shift+Tab");
-        expect(await target.evaluate((element) => element !== document.activeElement)).toBe(true);
-        return;
-      }
       expect(await target.evaluate((element) => element === document.activeElement)).toBe(true);
       return;
     }
-    await page.keyboard.press(key);
+    await page.keyboard.press("Tab");
   }
   const active = await page.evaluate(() => {
     const element = document.activeElement;
@@ -345,8 +339,14 @@ const pressButtonByTab = async (page: Page, name: string | RegExp): Promise<void
   const button = page.getByRole("button", { name });
   await expect(button).toBeEnabled();
   await tabTo(page, button);
-  await tabTo(page, button, "backward", { stepAwayFromTarget: true });
-  await tabTo(page, button);
+  // Keep the round trip literal and local to this button helper.
+  // A backward search would obscure how the learner revisits this control.
+  // The assertions below prove each native browser focus transition.
+  // Generic forward traversal remains bounded in tabTo().
+  await page.keyboard.press("Shift+Tab");
+  expect(await button.evaluate((element) => element !== document.activeElement)).toBe(true);
+  await page.keyboard.press("Tab");
+  expect(await button.evaluate((element) => element === document.activeElement)).toBe(true);
   await page.keyboard.press("Enter");
 };
 const pressCheckableByTab = async (page: Page, locator: Locator): Promise<void> => {
@@ -356,8 +356,8 @@ const pressCheckableByTab = async (page: Page, locator: Locator): Promise<void> 
 };
 const chooseSelectValueByTab = async (page: Page, label: string, value: string): Promise<void> => {
   const select = page.getByLabel(label);
-  // Run the host probe before entering the first real select, because removing
-  // its temporary select intentionally returns focus to the document body.
+  // The probe may move focus while it removes its temporary select, so find
+  // the real select again through the document's Tab order afterward.
   const nativeSelectSupported = await getNativeSelectSupport(page);
   await tabTo(page, select);
   const optionExists = await select.evaluate((element, wanted) => Array.from((element as HTMLSelectElement).options).some((option) => option.value === wanted), value);

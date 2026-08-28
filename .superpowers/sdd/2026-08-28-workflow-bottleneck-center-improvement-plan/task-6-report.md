@@ -12,7 +12,7 @@
 - `e2e/learner-improvements.spec.ts`
   - 375px CTA y `< 1,800`, static footer 문서 흐름 trigger non-overlap, selected scenario computed style, 관계 필수 목록·보조 그래프 숨김, 일정 단계 목록 기본, 7개 단계별 제목·고유 도움말 문장, 네 시나리오 전체 경로의 same-origin request·console/page error, reduced-motion computed style, print controls exclusion을 고정했습니다.
   - 하위 경로 이동은 `page.goto("./")`로 통일했습니다.
-  - 네 시나리오 전체 경로는 실제 Tab/Shift+Tab 순회 helper로 컨트롤을 찾고 native checkbox/radio는 Space, native select는 Home/ArrowDown/Tab 키 입력으로 조작합니다. 이 경로에는 injected keydown/`selectedIndex` shim과 직접 `.focus()` 점프를 사용하지 않습니다. 별도 native-select probe가 이 환경의 headless Chromium quirk를 감지할 때만 `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`과 함께 Playwright fallback을 허용하며, 기본 명령은 fallback 없이 실패를 드러냅니다.
+  - 네 시나리오 전체 경로는 실제 Tab/Shift+Tab 순회 helper로 컨트롤을 찾고 native checkbox/radio는 Space, native select는 Home/ArrowDown/Tab 키 입력으로 조작합니다. 버튼 round trip은 target 이탈용 Shift+Tab 1회, 즉시 복귀용 Tab 1회, Enter 순서를 고정하고 E2E trace로 인접한 세 키를 검증합니다. 이 경로에는 injected keydown/`selectedIndex` shim과 직접 `.focus()` 점프를 사용하지 않습니다. 별도 native-select probe가 이 환경의 headless Chromium quirk를 감지할 때만 `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`과 함께 Playwright fallback을 허용하며, 기본 명령은 fallback 없이 실패를 드러냅니다.
 - `e2e/accessibility-responsive.spec.ts`, `e2e/update-history.spec.ts`, `e2e/keyboard-mobile.spec.ts`, `e2e/persistence.spec.ts`
   - stage/report와 병목 heading을 exact selector로 만들고, 업데이트 버튼은 static footer 내부에서 찾도록 했습니다.
   - persistence 일정 행은 실제 `.timeline-grid [role="row"]`의 `aria-label` 계약으로 좁혔습니다.
@@ -39,7 +39,8 @@ Test Files 19 passed · Tests 190 passed
 기존 jsdom HTMLCanvasElement.getContext() 미구현 경고만 출력
 
 npm run check:file-length
-Checked 99 source files (allowance: max 499 lines; longest current file: 481 lines)
+Checked 99 source files (max 499 lines).
+현재 최장 파일: `e2e/fixtures/missionSolutions.ts` (490줄)
 
 npm run build
 vite build succeeded
@@ -64,14 +65,14 @@ passed
 
 ## 파일 길이·범위
 
-검사 대상 소스·설정·테스트 파일은 모두 허용 한도 499줄 이하이며, 현재 최장 파일은 `e2e/fixtures/missionSolutions.ts` 481줄입니다. 외부 기능, 학생 음성 기능, VoiceOver 구현·검증, 사람 대상 승인으로 범위를 확장하지 않았습니다.
+검사 대상 소스·설정·테스트 파일은 모두 허용 한도 499줄 이하이며, `npm run check:file-length`의 출력은 `Checked 99 source files (max 499 lines).`입니다. 이 출력의 499줄은 허용 한도이며, 현재 최장 파일은 `e2e/fixtures/missionSolutions.ts` 490줄입니다. 외부 기능, 학생 음성 기능, VoiceOver 구현·검증, 사람 대상 승인으로 범위를 확장하지 않았습니다.
 
 ## 커밋
 
 변경 파일만 아래 로컬 커밋으로 기록합니다.
 
 ```text
-test: harden real keyboard select probe gate
+test: enforce exact keyboard round trips
 ```
 
 push·배포·HVC 등록은 수행하지 않았습니다.
