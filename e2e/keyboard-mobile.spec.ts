@@ -24,10 +24,10 @@ test.describe("375px keyboard-only learner paths", () => {
       await installPointerFailureGuard(page);
       await page.addInitScript(() => localStorage.removeItem("workflow-bottleneck-center:progress:v1"));
       await page.setViewportSize({ width: 375, height: 812 });
-      await page.goto("/");
+      await page.goto("./");
       await completeMissionByKeyboard(page, solution);
 
-      await expect(page.getByRole("heading", { name: "개선 보고서" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "개선 보고서", exact: true })).toBeVisible();
       await expect(page.getByText("안전 조건 충족")).toBeVisible();
       await expect(page.getByText("품질 조건 충족")).toBeVisible();
       await expect(page.getByText("역할 공정성 충족")).toBeVisible();
@@ -39,7 +39,7 @@ test.describe("375px keyboard-only learner paths", () => {
       await expect(page.getByRole("heading", { name: "네 가지 근거 문장" })).toBeVisible();
       await expect(page.getByRole("group", { name: "선행 관계 근거" })).toBeVisible();
       await expect(page.getByRole("group", { name: "병렬 관계 근거" })).toBeVisible();
-      await expect(page.getByRole("group", { name: "병목 근거" })).toBeVisible();
+      await expect(page.getByRole("group", { name: "병목 근거", exact: true })).toBeVisible();
       await expect(page.getByRole("group", { name: "절충 근거" })).toBeVisible();
       for (const explanation of Object.values(solution.evidence)) {
         await expect(page.getByText(explanation, { exact: true })).toBeVisible();

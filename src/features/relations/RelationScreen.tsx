@@ -5,6 +5,7 @@ import { validateRelationMap } from "../../domain/relationValidator";
 import { LiveStatus } from "../../components/LiveStatus";
 import { RelationBoard } from "./RelationBoard";
 import { RelationEditor } from "./RelationEditor";
+import { RequiredActionButton } from "../../components/RequiredActionButton";
 
 export interface RelationScreenProps {
   scenario: ScenarioDefinition;
@@ -37,6 +38,8 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
   const edges = attempt.relationEdges;
   const validation = validateRelationMap(scenario, edges);
   const [announcement, setAnnouncement] = useState("");
+  const [hasValidated, setHasValidated] = useState(false);
+  const [validationAttempt, setValidationAttempt] = useState(0);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   const errorSummaryRef = useRef<HTMLElement>(null);
   const previousCount = useRef(edges.length);
@@ -50,13 +53,18 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
     }
   }, [edges.length]);
 
+  useEffect(() => {
+    if (hasValidated && validation.status === "invalid") errorSummaryRef.current?.focus();
+  }, [hasValidated, validation.status, validationAttempt]);
+
   const addOrRemove = (nextEdges: readonly DependencyEdge[]) => {
     if (onChange) onChange(nextEdges);
     else dispatch?.({ type: "SET_RELATIONS", edges: nextEdges });
   };
   const continueToSchedule = () => {
+    setHasValidated(true);
     if (validation.status === "invalid") {
-      errorSummaryRef.current?.focus();
+      setValidationAttempt((current) => current + 1);
       return;
     }
     if (onContinue) onContinue();
@@ -74,7 +82,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
           <RelationBoard scenario={scenario} edges={edges} validation={validation} listHeadingRef={listHeadingRef} onRemove={(edge, sourceIndex) => addOrRemove(edges.filter((item, index) => sourceIndex === undefined ? item.beforeTaskId !== edge.beforeTaskId || item.afterTaskId !== edge.afterTaskId : index !== sourceIndex))} />
         </div>
       </div>
-      {messages.length > 0 && (
+      {hasValidated && messages.length > 0 && (
         <section ref={errorSummaryRef} className="relation-feedback" role="alert" tabIndex={-1} aria-labelledby="relation-feedback-title">
           <h3 id="relation-feedback-title">관계 확인 안내</h3>
           <ul>{messages.map((message) => <li key={message}>{message}</li>)}</ul>
@@ -83,7 +91,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
       {validation.status === "valid-with-extra" && (
         <p className="relation-extra-feedback">학생이 추가한 관계는 안전하지만 기다림이 늘어날 수 있습니다. 필요하다면 삭제하고 흐름을 비교해 보세요.</p>
       )}
-      <button type="button" onClick={continueToSchedule}>관계 확인</button>
+      <RequiredActionButton actionId="confirm-relations" activeActionId="confirm-relations" onClick={continueToSchedule}>관계 확인</RequiredActionButton>
     </section>
   );
 }

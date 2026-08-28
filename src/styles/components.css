@@ -20,6 +20,7 @@
 }
 
 .task-card,
+.task-card-summary,
 .mission-goals,
 .bottleneck-card,
 .attempt-comparison,
@@ -41,7 +42,51 @@
 }
 
 .task-card {
+  padding: 0;
+  overflow: hidden;
   border-top: 5px solid var(--color-primary);
+}
+
+.task-card > summary {
+  display: list-item;
+  min-height: var(--control-height);
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  list-style-position: inside;
+  cursor: pointer;
+}
+
+.task-card__summary-content {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.task-card > summary::marker {
+  color: var(--color-primary);
+}
+
+.task-card > summary:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -3px;
+}
+
+.task-card[open] > summary {
+  border-bottom: 2px solid var(--color-line);
+  background: #edf5fc;
+}
+
+.task-card__summary-title {
+  font-weight: 800;
+}
+
+.task-card__summary-meta {
+  color: var(--color-ink-muted);
+  font-size: 1rem;
+}
+
+.task-card__body {
+  min-width: 0;
+  padding: var(--space-4);
 }
 
 .task-card dl {
@@ -63,6 +108,59 @@
 
 .task-card dd {
   margin: 0;
+}
+
+.task-card-summary {
+  display: grid;
+  gap: 0;
+}
+
+.task-card-summary__constraints {
+  display: grid;
+  gap: 0;
+  padding: var(--space-1) var(--space-2);
+  line-height: 1.25;
+  border-left: 4px solid var(--color-safety);
+  background: #fff8ef;
+}
+
+.task-card-summary__constraints h4 {
+  margin: 0;
+}
+
+.task-card-summary__constraints ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.task-card-summary__constraints li {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.task-card-summary ol {
+  display: grid;
+  gap: 0;
+  margin-bottom: 0;
+}
+
+.task-card-summary li {
+  display: block;
+  min-width: 0;
+  gap: var(--space-1);
+  padding: 0 var(--space-1);
+  line-height: 1.25;
+  border-left: 4px solid var(--color-primary);
+  background: #f4f8fb;
+}
+
+.task-card-summary li span,
+.task-card-summary li small {
+  display: inline;
+  overflow-wrap: anywhere;
+  color: var(--color-ink-muted);
+  font-size: 1rem;
 }
 
 .relation-editor fieldset,
@@ -92,65 +190,6 @@
   height: 2.75rem;
   min-height: 2.75rem;
   flex: 0 0 auto;
-}
-
-.relation-list {
-  display: grid;
-  gap: var(--space-2);
-  padding-left: 1.5rem;
-}
-
-.relation-list li {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2);
-  border-bottom: 2px solid var(--color-line);
-}
-
-.relation-list li span {
-  min-width: 0;
-}
-
-.relation-graph {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-  border: 2px solid var(--color-line);
-  border-radius: var(--radius-md);
-  background: #f7fafc;
-}
-
-.relation-node rect {
-  fill: var(--color-surface);
-  stroke: var(--color-primary);
-  stroke-width: 2;
-}
-
-.relation-node text,
-.relation-edge-label {
-  fill: var(--color-ink);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.relation-edge--safety,
-.relation-edge-label--safety {
-  color: var(--color-safety);
-}
-
-.relation-edge--quality,
-.relation-edge-label--quality {
-  color: var(--color-quality);
-}
-
-.relation-edge--workflow,
-.relation-edge-label--workflow {
-  color: var(--color-primary);
 }
 
 .bottleneck-cards {
@@ -233,9 +272,29 @@
 
 .timeline-grid {
   display: grid;
-  min-width: 34rem;
+  min-width: 0;
   grid-template-columns: 9rem repeat(var(--timeline-columns, 1), minmax(4rem, 1fr));
   border: 2px solid var(--color-line);
+}
+
+.timeline-grid-scroll-hint {
+  color: var(--color-ink-muted);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.placement-start-help,
+.placement-role-help,
+.timeline-role-note {
+  margin-bottom: 0;
+  color: var(--color-ink-muted);
+  font-size: 1rem;
+}
+
+@media (min-width: 601px) {
+  .timeline-grid {
+    min-width: 34rem;
+  }
 }
 
 .timeline-grid__header,
@@ -284,29 +343,27 @@
   min-width: 38rem;
 }
 
-.evidence-form {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.evidence-form fieldset {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.evidence-form fieldset > label {
-  min-width: 0;
-}
-
 .update-history-trigger {
-  position: fixed;
-  right: 1rem;
-  bottom: max(1rem, var(--safe-bottom));
-  z-index: 5;
+  position: static;
   min-height: 2.75rem;
   border-color: var(--color-primary);
   border-radius: 999px;
   background: var(--color-surface);
+}
+
+.scenario-navigation__button {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1) var(--space-2);
+  width: 100%;
+}
+
+.scenario-selection-status {
+  color: var(--color-primary-dark);
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
 .modal-backdrop {
@@ -333,11 +390,6 @@
   .task-card__field {
     grid-template-columns: 1fr;
     gap: 0;
-  }
-
-  .relation-list li {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .attempt-comparison table {
@@ -378,6 +430,7 @@
   .attempt-comparison td:nth-of-type(1)::before { content: "최초 일정"; }
   .attempt-comparison td:nth-of-type(2)::before { content: "수정 일정"; }
   .attempt-comparison td:nth-of-type(3)::before { content: "변화"; }
+
 }
 
 @media print {

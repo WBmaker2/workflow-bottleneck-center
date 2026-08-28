@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { chooseSelectValue, installKeyboardSelectSupport, pressButton } from "./fixtures/missionSolutions";
+import { chooseSelectValue, pressButton } from "./fixtures/missionSolutions";
 import { scenarioCatalog } from "../src/data/scenarios";
 import { requiredEdgesFromScenario } from "../src/domain/scenarioValidation";
 
@@ -13,20 +13,16 @@ const addRelation = async (page: import("@playwright/test").Page, before: string
 };
 
 test.describe("opt-in local progress", () => {
-  test.beforeEach(async ({ page }) => {
-    await installKeyboardSelectSupport(page);
-  });
-
   test("reload starts over when saving is off", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("./");
     await pressButton(page, "조건 확인");
-    await expect(page.getByRole("heading", { name: "관계 설계판" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "관계 설계판", exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByRole("heading", { name: "의뢰 접수" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "의뢰 접수", exact: true })).toBeVisible();
   });
 
   test("reload restores the saved stage and placed role", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("./");
     const save = page.getByRole("checkbox", { name: "이 기기에 진행 저장" });
     await save.focus();
     await page.keyboard.press("Space");
@@ -41,13 +37,13 @@ test.describe("opt-in local progress", () => {
     await page.keyboard.press("Space");
     await pressButton(page, "일정에 배치");
     await page.reload();
-    await expect(page.getByRole("heading", { name: "일정표" })).toBeVisible();
-    await expect(page.getByRole("row", { name: /자료 확인.*역할 A/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "일정표", exact: true })).toBeVisible();
+    await expect(page.locator('.timeline-grid [role="row"][aria-label*="자료 확인"][aria-label*="역할 A"]')).toHaveCount(1);
   });
 
   test("switching saving off clears only the versioned progress key", async ({ page }) => {
     await page.addInitScript((otherKey) => localStorage.setItem(otherKey, "keep-me"), unrelatedKey);
-    await page.goto("/");
+    await page.goto("./");
     const save = page.getByRole("checkbox", { name: "이 기기에 진행 저장" });
     await save.focus();
     await page.keyboard.press("Space");
@@ -60,13 +56,13 @@ test.describe("opt-in local progress", () => {
 
   test("corrupt saved data recovers without crashing the learner path", async ({ page }) => {
     await page.addInitScript((progressKey) => localStorage.setItem(progressKey, "not-json"), key);
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "의뢰 접수" })).toBeVisible();
+    await page.goto("./");
+    await expect(page.getByRole("heading", { name: "의뢰 접수", exact: true })).toBeVisible();
     await expect(page.getByRole("status")).toHaveText(/저장된 진행/);
   });
 
   test("never renders a learner-name field", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("./");
     await expect(page.locator("input[name*='name' i], textarea[name*='name' i]")).toHaveCount(0);
     await expect(page.getByText(/학생 이름이나 온라인 계정은 사용하지 않습니다/)).toBeVisible();
   });

@@ -107,8 +107,31 @@ describe("accessible learning shell", () => {
 
   it.each(stages)("%s has the plan-authorized pulse count", (stage) => {
     renderAtStage(stage);
-    const expected = ["briefing", "schedule", "analysis", "revision"].includes(stage) ? 1 : 0;
+    const expected = ["briefing", "relations", "schedule", "analysis", "revision"].includes(stage) ? 1 : 0;
     expect(document.querySelectorAll('[data-pulse="true"]').length).toBe(expected);
+  });
+
+  it("shows stage-specific help and a visually distinct selected scenario", () => {
+    renderAtStage("relations");
+    expect(screen.getByRole("complementary", { name: "관계 설계 단계 도움말" })).toHaveTextContent("지금 할 일");
+    expect(screen.getByRole("complementary", { name: "관계 설계 단계 도움말" })).toHaveTextContent("성공하려면");
+    const selected = screen.getByRole("button", { name: /과학 전시판 준비.*선택됨/ });
+    const other = screen.getByRole("button", { name: /도서 반납 카트/ });
+    expect(selected).toHaveAttribute("aria-current", "page");
+    expect(other).not.toHaveAttribute("aria-current", "page");
+    expect(getComputedStyle(selected).backgroundColor).not.toBe(getComputedStyle(other).backgroundColor);
+    expect(getComputedStyle(selected).borderColor).not.toBe(getComputedStyle(other).borderColor);
+  });
+
+  it("places stage help at the start of the stage shell before its screen content", () => {
+    renderAtStage("relations");
+    const stageShell = document.querySelector(".stage-shell")!;
+    const scenarioTitle = screen.getByRole("heading", { name: "과학 전시판 준비" });
+    const currentStage = screen.getByText("현재 단계: 관계 설계");
+    const help = screen.getByRole("complementary", { name: "관계 설계 단계 도움말" });
+    expect(stageShell.children[0]).toBe(scenarioTitle);
+    expect(stageShell.children[1]).toBe(currentStage);
+    expect(stageShell.children[2]).toBe(help);
   });
 
   it("keeps every interactive control named and avoids positive tab indexes", () => {
@@ -116,6 +139,16 @@ describe("accessible learning shell", () => {
     const unnamed = [...document.querySelectorAll<HTMLElement>("button, a, input, select, textarea")].filter((element) => !element.getAttribute("aria-label") && !element.getAttribute("aria-labelledby") && !(element as HTMLInputElement).labels?.length && !element.textContent?.trim());
     expect(unnamed).toHaveLength(0);
     expect(document.querySelectorAll('[tabindex]:not([tabindex="-1"]):not([tabindex="0"])')).toHaveLength(0);
+  });
+
+  it("names the briefing summary controls and keeps one required pulse", () => {
+    renderAtStage("briefing");
+    expect(screen.getByRole("heading", { name: "작업 핵심 조건 요약" })).toBeInTheDocument();
+    const summaries = [...document.querySelectorAll<HTMLElement>(".task-card-list details > summary")];
+    expect(summaries).toHaveLength(primaryScenario.tasks.length);
+    summaries.forEach((summary) => expect(summary).toHaveAccessibleName(/.+/));
+    expect(screen.getByRole("button", { name: "조건 확인" })).toHaveAccessibleName("조건 확인");
+    expect(document.querySelectorAll('[data-pulse="true"]')).toHaveLength(1);
   });
 
   it.each(stages)("%s does not render empty live regions", (stage) => {

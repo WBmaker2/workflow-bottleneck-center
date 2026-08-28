@@ -6,7 +6,7 @@ import { evaluateSchedule } from "../src/domain/evaluator";
 import { requiredEdgesFromScenario } from "../src/domain/scenarioValidation";
 import { simulateSchedule } from "../src/domain/simulator";
 import type { ScheduleDraft, TaskDefinition } from "../src/domain/types";
-import { draftFor, enterRevisionByKeyboard, installKeyboardSelectSupport, missionSolutions, pressButton } from "./fixtures/missionSolutions";
+import { draftFor, enterRevisionByKeyboard, missionSolutions, pressButton } from "./fixtures/missionSolutions";
 
 const science = scenarioCatalog.find(({ id }) => id === "science-display")!;
 const campaign = scenarioCatalog.find(({ id }) => id === "eco-campaign-booth")!;
@@ -23,10 +23,6 @@ const draftWithout = (scenarioId: "science-display" | "eco-campaign-booth", remo
 };
 
 test.describe("learning contract", () => {
-  test.beforeEach(async ({ page }) => {
-    await installKeyboardSelectSupport(page);
-  });
-
   test("approved revisions keep their declared time and role-load evidence", () => {
     for (const [scenarioId, expected] of Object.entries(expectedRevisions) as [keyof typeof expectedRevisions, typeof expectedRevisions[keyof typeof expectedRevisions]][]) {
       const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;
@@ -105,13 +101,13 @@ test.describe("learning contract", () => {
   test("the learner path makes no request outside the local app origin", async ({ page }) => {
     const requests: string[] = [];
     page.on("request", (request) => requests.push(request.url()));
-    await page.goto("/");
+    await page.goto("./");
     const origin = new URL(page.url()).origin;
     expect(requests.filter((url) => !url.startsWith(`${origin}/`) && url !== origin)).toEqual([]);
   });
 
   test("unfinished revision shows the completion failure and hides report entry", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("./");
     await enterRevisionByKeyboard(page, missionSolutions["science-display"]);
     await page.getByRole("button", { name: "최종 점검 일정 삭제" }).click();
     await pressButton(page, "수정안 실행·비교");
@@ -122,7 +118,7 @@ test.describe("learning contract", () => {
   });
 
   test("unsafe revision shows the safety failure and hides report entry", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("./");
     await enterRevisionByKeyboard(page, missionSolutions["eco-campaign-booth"]);
     await page.getByRole("button", { name: "안전 통로 점검 일정 삭제" }).click();
     await pressButton(page, "수정안 실행·비교");

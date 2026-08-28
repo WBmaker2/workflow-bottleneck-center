@@ -44,6 +44,7 @@ export function TimelineGrid({ scenario, entries, onMove, onDelete }: TimelineGr
     <section className="timeline-grid-section" aria-labelledby="timeline-title">
       <h3 id="timeline-title">시간표 보기</h3>
       <p>시간은 교육용 가상 단위입니다. 작업 카드는 드래그로 옮길 수 있지만, 아래 작업 배치 선택만으로도 모두 진행할 수 있습니다.</p>
+      <p className="timeline-grid-scroll-hint">옆으로 움직여 시간 보기</p>
       <div className="timeline-grid" role="grid" aria-label="작업 시간표">
         <div role="row" className="timeline-grid__header">
           <span role="columnheader">역할·도구</span>
