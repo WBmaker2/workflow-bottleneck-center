@@ -69,6 +69,24 @@ test("375px briefing keeps the first action within the opening viewport flow", a
   expect(documentTop).toBeLessThan(1800);
 });
 
+test("learner task summary keeps meta and condition copy at a readable 1rem minimum", async ({ page }) => {
+  await page.goto("./");
+
+  const summaryItems = page.locator('.task-card-summary ol [data-testid="task-summary-item"]');
+  const metaCopy = summaryItems.locator(":scope > span");
+  const conditionCopy = summaryItems.locator(":scope > small");
+  await expect(summaryItems).toHaveCount(scenarioCatalog[0]!.tasks.length);
+  await expect(metaCopy).toHaveCount(scenarioCatalog[0]!.tasks.length);
+  await expect(conditionCopy).toHaveCount(scenarioCatalog[0]!.tasks.length);
+  await expect(conditionCopy.first()).toContainText(/안전|품질/);
+
+  const fontSizes = await metaCopy.evaluateAll((elements) => elements.map((element) => parseFloat(getComputedStyle(element).fontSize)));
+  const conditionFontSizes = await conditionCopy.evaluateAll((elements) => elements.map((element) => parseFloat(getComputedStyle(element).fontSize)));
+  for (const fontSize of [...fontSizes, ...conditionFontSizes]) {
+    expect(fontSize).toBeGreaterThanOrEqual(16);
+  }
+});
+
 test("briefing pulse becomes static emphasis when motion is reduced", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.emulateMedia({ reducedMotion: "reduce" });
