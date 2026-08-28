@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { chooseSelectValue, installKeyboardSelectSupport, pressButton } from "./fixtures/missionSolutions";
+import { chooseSelectValue, pressButton } from "./fixtures/missionSolutions";
 import { scenarioCatalog } from "../src/data/scenarios";
 import { requiredEdgesFromScenario } from "../src/domain/scenarioValidation";
 
@@ -13,10 +13,6 @@ const addRelation = async (page: import("@playwright/test").Page, before: string
 };
 
 test.describe("opt-in local progress", () => {
-  test.beforeEach(async ({ page }) => {
-    await installKeyboardSelectSupport(page);
-  });
-
   test("reload starts over when saving is off", async ({ page }) => {
     await page.goto("./");
     await pressButton(page, "조건 확인");

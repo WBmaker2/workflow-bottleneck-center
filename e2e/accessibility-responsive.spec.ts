@@ -50,7 +50,7 @@ const progressFor = (stage: LearningStage): AppProgressV1 => {
     }])),
   } as AppProgressV1;
   const attempt = encoded.attempts[scenario.id] as PersistedMissionAttempt;
-  const draft = stage === "report" ? successfulReportFixture() : scheduleFixture();
+  const draft = stage === "report" || stage === "simulation" ? successfulReportFixture() : scheduleFixture();
   const result = simulateSchedule(scenario, draft);
   attempt.stage = stage;
   attempt.conditionsAcknowledged = stage !== "briefing";
@@ -137,10 +137,17 @@ test("desktop relation and schedule stages use one workspace track", async ({ pa
 
 test("motion reduction keeps the simulation manual", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: storageKey, value: JSON.stringify(progressFor("simulation")) });
   await page.goto("./");
-  await expect(page.locator("[data-reduced-motion='false']")).toBeVisible();
-  await expect(page.getByRole("button", { name: "가상 실행 시작" })).toBeVisible();
+  await expect(page.locator("[data-reduced-motion='true']")).toBeVisible();
+  await expect(page.getByRole("button", { name: "다음 단계" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "가상 실행 시작" })).toHaveCount(0);
+  const timeline = page.getByRole("heading", { name: "가상 시간 0단위 정지 화면", exact: true });
+  await expect(timeline).toBeVisible();
+  await page.getByRole("button", { name: "다음 단계" }).click();
+  await expect(page.getByRole("heading", { name: "가상 시간 1단위 정지 화면", exact: true })).toBeVisible();
+  await expect(timeline).toHaveCount(0);
   expect(scheduleStartUpperBound(scenario)).toBeGreaterThan(0);
 });
 

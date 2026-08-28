@@ -6,7 +6,7 @@ import { evaluateSchedule } from "../src/domain/evaluator";
 import { requiredEdgesFromScenario } from "../src/domain/scenarioValidation";
 import { simulateSchedule } from "../src/domain/simulator";
 import type { ScheduleDraft, TaskDefinition } from "../src/domain/types";
-import { draftFor, enterRevisionByKeyboard, installKeyboardSelectSupport, missionSolutions, pressButton } from "./fixtures/missionSolutions";
+import { draftFor, enterRevisionByKeyboard, missionSolutions, pressButton } from "./fixtures/missionSolutions";
 
 const science = scenarioCatalog.find(({ id }) => id === "science-display")!;
 const campaign = scenarioCatalog.find(({ id }) => id === "eco-campaign-booth")!;
@@ -23,10 +23,6 @@ const draftWithout = (scenarioId: "science-display" | "eco-campaign-booth", remo
 };
 
 test.describe("learning contract", () => {
-  test.beforeEach(async ({ page }) => {
-    await installKeyboardSelectSupport(page);
-  });
-
   test("approved revisions keep their declared time and role-load evidence", () => {
     for (const [scenarioId, expected] of Object.entries(expectedRevisions) as [keyof typeof expectedRevisions, typeof expectedRevisions[keyof typeof expectedRevisions]][]) {
       const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;

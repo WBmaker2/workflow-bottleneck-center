@@ -6,6 +6,7 @@ import * as axeMatchers from "vitest-axe/matchers";
 import { App } from "../../src/App";
 import { ModalDialog } from "../../src/components/ModalDialog";
 import { scenarioCatalog } from "../../src/data/scenarios";
+import { TaskCardSummary } from "../../src/features/briefing/TaskCardSummary";
 
 expect.extend(axeMatchers);
 
@@ -40,6 +41,22 @@ it("progressively reveals the learner briefing", () => {
   expect(cta).toBeVisible();
   expect(screen.getByText(/이 버튼을 누르면 관계 연결로 이동/)).toBeVisible();
   expect(screen.getAllByText(/모든 시간은 교육용/)).toHaveLength(1);
+});
+
+it("shows each scenario's exact simulator capacity and fairness rules", () => {
+  const { rerender } = render(<TaskCardSummary scenario={scenarioCatalog[0]!} />);
+
+  for (const scenario of scenarioCatalog) {
+    rerender(<TaskCardSummary scenario={scenario} />);
+    const constraints = screen.getByRole("list", { name: "시뮬레이터가 지키는 약속" });
+    for (const resource of scenario.resources) {
+      expect(constraints).toHaveTextContent(`${resource.label}는 한 번에 ${resource.capacity}개만 쓸 수 있어요.`);
+    }
+    expect(constraints).toHaveTextContent(`최소 ${scenario.fairness.minParticipatingRoles}개 역할이 참여해야 해요.`);
+    expect(constraints).toHaveTextContent(`역할별 맡은 양 차이는 ${scenario.fairness.maxLoadGap}단위 이하여야 공정해요.`);
+    expect(screen.getAllByTestId("task-summary-item").some((item) => item.textContent?.includes("역할·도구가 겹치지 않으면 동시 진행 가능"))).toBe(true);
+    expect(screen.queryByText(/동시 가능/)).not.toBeInTheDocument();
+  }
 });
 
 function CallbackChangingDialog({ version = 1 }: { version?: number }) {

@@ -7,7 +7,6 @@ import {
   addRequiredRelations,
   completeMissionByKeyboard,
   completeMissionByRealKeyboard,
-  installKeyboardSelectSupport,
   installPointerFailureGuard,
   installKeyboardOnlyFailureGuard,
   missionSolutions,
@@ -118,7 +117,6 @@ test("mobile update trigger stays below the stage without overlap", async ({ pag
 test("each learner stage presents its title and unique help copy", async ({ page }) => {
   const solution = missionSolutions["science-display"];
   await page.setViewportSize({ width: 375, height: 812 });
-  await installKeyboardSelectSupport(page);
   await installPointerFailureGuard(page);
   await page.addInitScript(() => localStorage.removeItem("workflow-bottleneck-center:progress:v1"));
   await page.goto("./");
@@ -251,7 +249,6 @@ test("375px schedule starts with the step list without document overflow", async
 });
 
 test("print media excludes learner controls while keeping the teacher summary", async ({ page }) => {
-  await installKeyboardSelectSupport(page);
   await page.addInitScript(() => localStorage.removeItem("workflow-bottleneck-center:progress:v1"));
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("./");

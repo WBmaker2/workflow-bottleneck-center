@@ -57,7 +57,7 @@ export function TaskCard({ task, scenario, defaultOpen = false }: TaskCardProps)
               </ul>
             </dd>
           </div>
-          <div className="task-card__field"><dt>동시 진행</dt><dd>{task.parallel === "solo" ? "동시에 진행: 단독 진행" : "동시에 진행: 조건이 맞으면 가능"}</dd></div>
+          <div className="task-card__field"><dt>동시 진행</dt><dd>{task.parallel === "solo" ? "동시에 진행: 단독 진행" : "동시에 진행: 역할·도구가 겹치지 않으면 동시 진행 가능"}</dd></div>
           <div className="task-card__field">
             <dt>안전·품질 조건</dt>
             <dd>{task.conditions.length === 0 ? "안전·품질 조건 없음" : <ul>{task.conditions.map((condition) => <li key={condition.id}>{`${condition.kind === "safety" ? "안전" : "품질"}: ${condition.label}`}</li>)}</ul>}</dd>

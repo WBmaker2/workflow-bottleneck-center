@@ -76,3 +76,28 @@ test: enforce exact keyboard round trips
 ```
 
 push·배포·HVC 등록은 수행하지 않았습니다.
+
+## 최종 scoped fix wave — briefing facts, reduced-motion E2E, native-select probe
+
+최종 리뷰 지적을 반영했습니다.
+
+- `TaskCardSummary`가 네 시나리오의 모든 공유 자원별 정확한 capacity와 fairness의 최소 참여 역할·최대 부하 차이를 `시뮬레이터가 지키는 약속`으로 CTA 전에 공개합니다. 허용 동시 작업 문구는 `역할·도구가 겹치지 않으면 동시 진행 가능`으로 명확히 했고, 작업 요약 meta·조건 copy는 1rem으로 올렸습니다.
+- `e2e/accessibility-responsive.spec.ts`는 `page.emulateMedia({ reducedMotion: "reduce" })`, `data-reduced-motion="true"`, `다음 단계` 노출·`가상 실행 시작` 부재, 0→1단위 수동 화면 진행을 확인합니다.
+- 키보드 fixture에서 합성 `keydown`/`selectedIndex`/합성 `input/change` shim을 제거했습니다. native probe는 화면에 보이는 임시 select에 실제 Tab/Home/ArrowDown 키를 보내고, `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`일 때만 Playwright `selectOption` fallback을 허용합니다. `missionSolutions.ts`는 441줄입니다.
+
+최종 검증 결과:
+
+```text
+npm test -- --run tests/ui/briefing.test.tsx tests/ui/accessibility.test.tsx tests/ui/simulation.test.tsx  3 files, 58 passed
+npm run lint  통과
+npm run typecheck  통과
+npm run check:file-length  Checked 99 source files (max 499 lines)
+WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/accessibility-responsive.spec.ts  10 passed
+WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/learner-improvements.spec.ts  6 passed, 6 failed (strict; native-select probe=false)
+WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e -- e2e/learner-improvements.spec.ts  12 passed
+WORKFLOW_E2E_PORT=4174 npm run test:e2e  29 passed, 14 failed (strict; native-select probe=false)
+WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e  43 passed
+git diff --check  통과
+```
+
+strict 전체의 14개 실패는 앱 assertion 실패가 아니라 이 macOS headless Chromium 환경에서 실제 native select가 Tab/Home/ArrowDown 키 선택을 커밋하지 않는 한계가 각 native-select 경로에 드러난 결과입니다. visible probe로 재시도해도 `probe=false`였으며 fallback은 명시적 opt-in에서만 사용했습니다. VoiceOver, push, deploy, HVC 등록은 수행하지 않았습니다.

@@ -17,7 +17,10 @@ export const probeNativeSelectKeyboard = async (page: Page): Promise<boolean> =>
     select.dataset.workflowNativeSelectProbe = "true";
     select.setAttribute("aria-label", "native select keyboard probe");
     select.innerHTML = "<option value='probe-first'>첫 번째</option><option value='probe-second'>두 번째</option>";
-    Object.assign(select.style, { position: "fixed", left: "0", top: "0", opacity: "0" });
+    // Keep the native control visible to Chromium's keyboard path. Opacity 0
+    // and offscreen clipping can make headless native selects ignore arrow-key
+    // commits on macOS, so this short-lived probe occupies a small corner.
+    Object.assign(select.style, { position: "fixed", left: "8px", top: "8px", width: "160px", height: "44px", zIndex: "2147483647" });
     document.body.append(select);
   });
   try {

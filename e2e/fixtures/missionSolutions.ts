@@ -94,30 +94,6 @@ export const installPointerFailureGuard = async (page: Page): Promise<void> => {
     for (const eventName of ["pointerdown", "mousedown", "touchstart"]) {
       document.addEventListener(eventName, fail, true);
     }
-    document.addEventListener("keydown", (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLSelectElement)) return;
-      const enabledIndexes = Array.from(target.options).map((option, index) => option.disabled ? -1 : index).filter((index) => index >= 0);
-      const currentPosition = enabledIndexes.indexOf(target.selectedIndex);
-      const nextPosition = event.key === "Home"
-        ? 0
-        : event.key === "End"
-          ? enabledIndexes.length - 1
-          : event.key === "ArrowDown"
-            ? Math.min(currentPosition + 1, enabledIndexes.length - 1)
-            : event.key === "ArrowUp"
-              ? Math.max(currentPosition - 1, 0)
-              : null;
-      const nextIndex = nextPosition === null ? null : enabledIndexes[nextPosition]!;
-      if (nextIndex === null || nextIndex === target.selectedIndex) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      target.selectedIndex = nextIndex;
-      setTimeout(() => {
-        target.dispatchEvent(new Event("input", { bubbles: true }));
-        target.dispatchEvent(new Event("change", { bubbles: true }));
-      }, 0);
-    }, true);
   });
 };
 
@@ -130,50 +106,25 @@ export const installKeyboardOnlyFailureGuard = async (page: Page): Promise<void>
   });
 };
 
-export const installKeyboardSelectSupport = async (page: Page): Promise<void> => {
-  await page.addInitScript(() => {
-    document.addEventListener("keydown", (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLSelectElement)) return;
-      const enabledIndexes = Array.from(target.options).map((option, index) => option.disabled ? -1 : index).filter((index) => index >= 0);
-      const currentPosition = enabledIndexes.indexOf(target.selectedIndex);
-      const nextPosition = event.key === "Home"
-        ? 0
-        : event.key === "End"
-          ? enabledIndexes.length - 1
-          : event.key === "ArrowDown"
-            ? Math.min(currentPosition + 1, enabledIndexes.length - 1)
-            : event.key === "ArrowUp"
-              ? Math.max(currentPosition - 1, 0)
-              : null;
-      const nextIndex = nextPosition === null ? null : enabledIndexes[nextPosition]!;
-      if (nextIndex === null || nextIndex === target.selectedIndex) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      target.selectedIndex = nextIndex;
-      setTimeout(() => {
-        target.dispatchEvent(new Event("input", { bubbles: true }));
-        target.dispatchEvent(new Event("change", { bubbles: true }));
-      }, 0);
-    }, true);
-  });
-};
-
 export const chooseSelectValue = async (page: Page, label: string, value: string): Promise<void> => {
   const select = page.getByLabel(label);
+  const nativeSelectSupported = await getNativeSelectSupport(page);
   await select.focus();
-  const optionExists = await select.evaluate((element, wanted) => Array.from((element as HTMLSelectElement).options).some((option) => option.value === wanted), value);
-  if (!optionExists) throw new Error(`Option ${value} is missing from ${label}`);
+  const optionIndex = await select.evaluate((element, wanted) => Array.from((element as HTMLSelectElement).options).findIndex((option) => option.value === wanted), value);
+  if (optionIndex < 0) throw new Error(`Option ${value} is missing from ${label}`);
   await page.keyboard.press("Home");
-  for (let step = 0; step < 20; step += 1) {
-    await page.waitForTimeout(25);
-    if (await select.inputValue() === value) break;
-    await page.keyboard.press("ArrowDown");
-  }
+  for (let step = 0; step < optionIndex; step += 1) await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Tab");
   await page.waitForTimeout(25);
   const selected = await select.inputValue();
-  if (selected !== value) throw new Error(`Keyboard selection for ${label} stopped at ${selected}, expected ${value}`);
+  if (selected !== value) {
+    const fallbackAllowed = !nativeSelectSupported && process.env.WORKFLOW_E2E_ALLOW_SELECT_FALLBACK === "1";
+    if (!fallbackAllowed) {
+      throw new Error(`Native select keyboard input did not commit ${label}=${value} (probe=${nativeSelectSupported}). Set WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 only after the probe detects this environment quirk.`);
+    }
+    await select.selectOption(value);
+  }
+  await expect(select).toHaveValue(value);
 };
 
 export const pressButton = async (page: Page, name: string | RegExp): Promise<void> => {
