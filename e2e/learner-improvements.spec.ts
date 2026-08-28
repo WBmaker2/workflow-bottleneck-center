@@ -6,8 +6,10 @@ import { encodeProgress } from "../src/storage/progressCodec";
 import {
   addRequiredRelations,
   completeMissionByKeyboard,
+  completeMissionByRealKeyboard,
   installKeyboardSelectSupport,
   installPointerFailureGuard,
+  installKeyboardOnlyFailureGuard,
   missionSolutions,
   placeEntries,
   pressButton,
@@ -157,12 +159,11 @@ for (const scenarioId of ["science-display", "library-cart", "class-presentation
     page.on("request", (request) => requests.push(request.url()));
     page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
     page.on("pageerror", (error) => pageErrors.push(error.message));
-    await installKeyboardSelectSupport(page);
-    await installPointerFailureGuard(page);
+    await installKeyboardOnlyFailureGuard(page);
     await page.addInitScript(() => localStorage.removeItem("workflow-bottleneck-center:progress:v1"));
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("./");
-    await completeMissionByKeyboard(page, missionSolutions[scenarioId]);
+    await completeMissionByRealKeyboard(page, missionSolutions[scenarioId]);
     await expect(page.getByRole("heading", { name: "개선 보고서", exact: true })).toBeVisible();
     await page.waitForTimeout(50);
     const origin = new URL(page.url()).origin;

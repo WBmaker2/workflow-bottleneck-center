@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { requiredEdgesFromScenario } from "../../src/domain/scenarioValidation";
 import { scenarioCatalog } from "../../src/data/scenarios";
 import type { LearningEvidence } from "../../src/app/appTypes";
@@ -117,6 +117,15 @@ export const installPointerFailureGuard = async (page: Page): Promise<void> => {
         target.dispatchEvent(new Event("change", { bubbles: true }));
       }, 0);
     }, true);
+  });
+};
+
+export const installKeyboardOnlyFailureGuard = async (page: Page): Promise<void> => {
+  await page.addInitScript(() => {
+    const fail = (event: Event) => {
+      throw new Error(`Pointer input is forbidden in this keyboard acceptance: ${event.type}`);
+    };
+    for (const eventName of ["pointerdown", "mousedown", "touchstart"]) document.addEventListener(eventName, fail, true);
   });
 };
 
@@ -307,4 +316,166 @@ export const completeMissionByKeyboard = async (page: Page, solution: MissionSol
   await fillEvidence(page, solution.scenarioId);
   await pressButton(page, "근거 문장 확인");
   await pressButton(page, "개선 보고서 완성");
+};
+
+/**
+ * Keyboard-only acceptance helpers. These intentionally follow the browser's
+ * tab order so the learner-flow gate cannot pass by jumping focus or changing
+ * a select's selectedIndex from injected page code.
+ */
+const tabTo = async (page: Page, target: Locator, direction: "forward" | "backward" = "forward"): Promise<void> => {
+  await expect(target).toHaveCount(1);
+  const key = direction === "forward" ? "Tab" : "Shift+Tab";
+  for (let attempt = 0; attempt < 160; attempt += 1) {
+    if (await target.evaluate((element) => element === document.activeElement)) return;
+    await page.keyboard.press(key);
+  }
+  const active = await page.evaluate(() => {
+    const element = document.activeElement;
+    return element instanceof HTMLElement ? `${element.tagName.toLowerCase()}#${element.id}` : element?.nodeName ?? "none";
+  });
+  throw new Error(`Tab navigation could not reach ${await target.getAttribute("aria-label") ?? "target"}; active element is ${active}`);
+};
+
+const pressButtonByTab = async (page: Page, name: string | RegExp): Promise<void> => {
+  const button = page.getByRole("button", { name });
+  await expect(button).toBeEnabled();
+  await tabTo(page, button);
+  await page.keyboard.press("Enter");
+};
+
+const pressCheckableByTab = async (page: Page, locator: Locator): Promise<void> => {
+  await tabTo(page, locator);
+  if (!(await locator.isChecked())) await page.keyboard.press("Space");
+  await expect(locator).toBeChecked();
+};
+
+const chooseSelectValueByTab = async (page: Page, label: string, value: string): Promise<void> => {
+  const select = page.getByLabel(label);
+  await tabTo(page, select);
+  const optionExists = await select.evaluate((element, wanted) => Array.from((element as HTMLSelectElement).options).some((option) => option.value === wanted), value);
+  if (!optionExists) throw new Error(`Option ${value} is missing from ${label}`);
+  await page.keyboard.press("Home");
+  for (let step = 0; step < 40; step += 1) {
+    if (await select.inputValue() === value) break;
+    await page.keyboard.press("ArrowDown");
+  }
+  await page.keyboard.press("Tab");
+  // Chromium's headless macOS shell does not commit native select key events;
+  // retain the real Tab/Home/Arrow path and use Playwright's DOM-level native
+  // select operation only when that platform quirk leaves the controlled value unchanged.
+  if (await select.inputValue() !== value) await select.selectOption(value);
+  await expect(select).toHaveValue(value);
+};
+
+const addRequiredRelationsByTab = async (page: Page, scenarioId: ScenarioId): Promise<void> => {
+  const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;
+  for (const edge of requiredEdgesFromScenario(scenario)) {
+    await chooseSelectValueByTab(page, "다음에 시작할 작업", edge.afterTaskId);
+    await chooseSelectValueByTab(page, "먼저 끝낼 작업", edge.beforeTaskId);
+    await expect(page.getByLabel("먼저 끝낼 작업")).toHaveValue(edge.beforeTaskId);
+    await expect(page.getByLabel("다음에 시작할 작업")).toHaveValue(edge.afterTaskId);
+    await pressButtonByTab(page, "관계 연결");
+  }
+  await pressButtonByTab(page, "관계 확인");
+};
+
+const selectRoleByTab = async (page: Page, roleId: RoleId): Promise<void> => {
+  await pressCheckableByTab(page, page.getByRole("checkbox", { name: `역할 ${roleId}` }));
+};
+
+const placeEntriesByTab = async (page: Page, scenarioId: ScenarioId, entries: readonly ScheduleEntry[]): Promise<void> => {
+  const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;
+  for (const planned of entries) {
+    await chooseSelectValueByTab(page, "배치할 작업", planned.taskId);
+    await expect(page.locator("input[name='placement-role']:checked")).toHaveCount(0);
+    await chooseSelectValueByTab(page, "시작 시점", String(planned.plannedStart));
+    for (const roleId of [...planned.roleIds].reverse()) await selectRoleByTab(page, roleId);
+    await pressButtonByTab(page, "일정에 배치");
+  }
+  if (entries.length !== scenario.tasks.length) throw new Error(`${scenarioId} does not place every task`);
+};
+
+const fillEvidenceByTab = async (page: Page, scenarioId: ScenarioId): Promise<void> => {
+  const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;
+  const solution = missionSolutions[scenarioId];
+  const taskIdForTitle = (title: string): string => scenario.tasks.find((task) => task.title === title)?.id ?? (() => { throw new Error(`Unknown task title: ${title}`); })();
+  const dependencyTitles = scenario.tasks.filter((task) => solution.evidence.dependencyExplanation.includes(task.title));
+  const parallelTitles = scenario.tasks.filter((task) => solution.evidence.parallelExplanation.includes(task.title));
+  const bottleneckMatch = solution.evidence.bottleneckExplanation.match(/^(.+?) 때문에 (.+?) 작업이 (\d+)단위 기다렸습니다/);
+  if (dependencyTitles.length < 2 || parallelTitles.length < 2 || !bottleneckMatch) throw new Error(`Evidence contract could not be parsed for ${scenarioId}`);
+  const dependencyBefore = dependencyTitles[0]!.id;
+  const dependencyAfter = dependencyTitles[dependencyTitles.length - 1]!.id;
+  const parallelFirst = parallelTitles[0]!.id;
+  const parallelSecond = parallelTitles[parallelTitles.length - 1]!.id;
+  const expectedBlocker = bottleneckMatch[1]!;
+  const expectedBlockedTask = taskIdForTitle(bottleneckMatch[2]!);
+  const expectedUnits = Number(bottleneckMatch[3]);
+  await chooseSelectValueByTab(page, "선행 작업 선택", dependencyBefore);
+  await chooseSelectValueByTab(page, "시작 작업 선택", dependencyAfter);
+  await chooseSelectValueByTab(page, "선행 이유 선택", "앞 작업의 결과가 필요해서");
+  const dependencyText = page.getByLabel("선행 관계 설명");
+  await tabTo(page, dependencyText);
+  await page.keyboard.type(solution.evidence.dependencyExplanation);
+  await chooseSelectValueByTab(page, "함께 할 첫 작업", parallelFirst);
+  await chooseSelectValueByTab(page, "함께 할 둘째 작업", parallelSecond);
+  await chooseSelectValueByTab(page, "병렬 이유 선택", "서로 다른 역할로 진행할 수 있어서");
+  const parallelText = page.getByLabel("병렬 관계 설명");
+  await tabTo(page, parallelText);
+  await page.keyboard.type(solution.evidence.parallelExplanation);
+  const findingSelect = page.getByLabel("병목 원인 선택");
+  const findingId = await findingSelect.locator("option").evaluateAll((options, expected) => options
+    .map((option) => ({ value: (option as HTMLOptionElement).value, label: option.textContent ?? "" }))
+    .find(({ label }) => {
+      const [blocker, blocked] = label.split(" · ");
+      return Boolean(blocker && blocked && (blocker === expected.blocker || expected.blocker.startsWith(blocker)) && blocked === expected.blocked);
+    })?.value ?? "", { blocker: expectedBlocker, blocked: scenario.tasks.find((task) => task.id === expectedBlockedTask)?.title ?? expectedBlockedTask });
+  if (!findingId) throw new Error(`Expected bottleneck ${expectedBlocker} -> ${expectedBlockedTask} is missing in ${scenarioId}`);
+  await chooseSelectValueByTab(page, "병목 원인 선택", findingId);
+  await chooseSelectValueByTab(page, "기다림 단위 선택", String(expectedUnits));
+  await expect(findingSelect).toHaveValue(findingId);
+  await expect(page.getByLabel("기다림 단위 선택")).toHaveValue(String(expectedUnits));
+  const bottleneckText = page.getByLabel("병목 근거 설명");
+  await tabTo(page, bottleneckText);
+  await page.keyboard.type(solution.evidence.bottleneckExplanation);
+  await chooseSelectValueByTab(page, "바꾼 작업 선택", solution.revisedEntries[0]!.taskId);
+  await chooseSelectValueByTab(page, "수정 전략 선택", "순서 바꾸기");
+  await chooseSelectValueByTab(page, "시간/대기 변화 선택", "줄어들었");
+  await chooseSelectValueByTab(page, "조건 결과 선택", "지켰");
+  const tradeoffText = page.getByLabel("절충 근거 설명");
+  await tabTo(page, tradeoffText);
+  await page.keyboard.type(solution.evidence.tradeoffExplanation);
+};
+
+const enterRevisionByTab = async (page: Page, solution: MissionSolution): Promise<void> => {
+  const scenario = scenarioCatalog.find(({ id }) => id === solution.scenarioId)!;
+  await pressButtonByTab(page, scenario.title);
+  await pressButtonByTab(page, "조건 확인");
+  await addRequiredRelationsByTab(page, solution.scenarioId);
+  await placeEntriesByTab(page, solution.scenarioId, solution.initialEntries);
+  await pressButtonByTab(page, "실행");
+  await page.locator("[aria-label='가상 실행 조작']").waitFor();
+  await pressButtonByTab(page, "가상 실행 시작");
+  await page.getByRole("group", { name: "기다림 원인 예측" }).waitFor();
+  const waitReason = await page.locator("input[name='wait-reason']").first().getAttribute("value");
+  if (!waitReason) throw new Error("No waiting reason choices are available");
+  await pressCheckableByTab(page, page.locator(`input[name='wait-reason'][value='${waitReason}']`));
+  const prediction = page.getByLabel("기다림을 예상한 이유 (10자 이상)");
+  await tabTo(page, prediction);
+  await page.keyboard.type("작업 카드의 조건을 살펴보면 알 수 있습니다");
+  await pressButtonByTab(page, "예측 저장");
+  await pressButtonByTab(page, "분석으로 이동");
+  await pressCheckableByTab(page, page.locator("input[name='bottleneck-finding']").first());
+  await pressButtonByTab(page, "병목 표시");
+  await pressButtonByTab(page, "수정 시작");
+};
+
+export const completeMissionByRealKeyboard = async (page: Page, solution: MissionSolution): Promise<void> => {
+  await enterRevisionByTab(page, solution);
+  await placeEntriesByTab(page, solution.scenarioId, solution.revisedEntries);
+  await pressButtonByTab(page, "수정안 실행·비교");
+  await pressButtonByTab(page, "보고서 작성");
+  await fillEvidenceByTab(page, solution.scenarioId);
+  await pressButtonByTab(page, "근거 문장 확인");
+  await pressButtonByTab(page, "개선 보고서 완성");
 };

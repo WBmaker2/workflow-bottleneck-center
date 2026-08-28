@@ -12,6 +12,7 @@
 - `e2e/learner-improvements.spec.ts`
   - 375px CTA y `< 1,800`, static footer 문서 흐름 trigger non-overlap, selected scenario computed style, 관계 필수 목록·보조 그래프 숨김, 일정 단계 목록 기본, 7개 단계별 제목·고유 도움말 문장, 네 시나리오 전체 경로의 same-origin request·console/page error, reduced-motion computed style, print controls exclusion을 고정했습니다.
   - 하위 경로 이동은 `page.goto("./")`로 통일했습니다.
+  - 네 시나리오 전체 경로는 실제 Tab 순회 helper로 컨트롤을 찾고 native checkbox/radio는 Space, native select는 Home/ArrowDown/Tab 키 입력으로 조작합니다. 이 경로에는 injected keydown/`selectedIndex` shim과 직접 `.focus()` 점프를 사용하지 않으며, 이 환경의 headless Chromium에서 native select key event가 controlled value를 커밋하지 않을 때만 Playwright native select fallback을 사용합니다.
 - `e2e/accessibility-responsive.spec.ts`, `e2e/update-history.spec.ts`, `e2e/keyboard-mobile.spec.ts`, `e2e/persistence.spec.ts`
   - stage/report와 병목 heading을 exact selector로 만들고, 업데이트 버튼은 static footer 내부에서 찾도록 했습니다.
   - persistence 일정 행은 실제 `.timeline-grid [role="row"]`의 `aria-label` 계약으로 좁혔습니다.
@@ -44,13 +45,16 @@ npm run build
 vite build succeeded
 
 WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/learner-improvements.spec.ts
-12 passed (1.4m, 권한 상승 재시도)
+12 passed (권한 상승 재시도)
+
+WORKFLOW_E2E_PORT=4174 npm run test:e2e
+43 passed (56.3s, 권한 상승 재시도)
 
 git diff --check
 passed
 ```
 
-4173 점유 프로세스는 종료하지 않았습니다. 일반 sandbox의 첫 실행에서는 이 macOS 환경의 Playwright Chromium이 `bootstrap_check_in ... Permission denied (1100)`로 시작 직후 종료되었으나, 권한 상승 재시도에서 learner-improvements 12/12가 통과했습니다. 초기 오류는 앱 assertion 실패가 아닌 브라우저 호스트 권한 차이였고 최종 learner E2E 결과는 통과로 기록합니다.
+4173 점유 프로세스는 종료하지 않았습니다. 일반 sandbox의 첫 실행에서는 이 macOS 환경의 Playwright Chromium이 `bootstrap_check_in ... Permission denied (1100)`로 시작 직후 종료되었으나, 권한 상승 재시도에서 learner-improvements 12/12 및 전체 E2E 43/43이 통과했습니다. 초기 오류는 앱 assertion 실패가 아닌 브라우저 호스트 권한 차이였고 최종 결과는 통과로 기록합니다.
 
 ## 파일 길이·범위
 

@@ -15,6 +15,8 @@
 - 인쇄 매체에서는 학습자 입력·완료·업데이트 controls를 제외하고 교사용 요약만 남습니다.
 - 기존 키보드 전용 흐름, 저장 복구, 핵심 버튼 44px 이상, 375px 가로 스크롤 제한을 유지합니다.
 
+네 시나리오 전체 경로 회귀는 실제 Tab/Shift+Tab 순회로 컨트롤을 찾고 Enter/Space/Arrow 키로 조작했습니다. 이 경로에는 injected keydown/`selectedIndex` shim이나 직접 `.focus()` 점프를 사용하지 않았습니다. Chromium headless에서 native select key event가 controlled value를 커밋하지 않는 경우에만 Playwright native select fallback을 사용했습니다.
+
 VoiceOver 구현 및 검증, 사람 대상 승인, 학생 음성 기능은 이번 범위에 포함하지 않습니다.
 
 ## 실행 명령과 결과
@@ -28,6 +30,7 @@ npm test                             통과
 npm run check:file-length            통과 (최대 499줄)
 npm run build                        통과
 WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/learner-improvements.spec.ts  12 passed (권한 상승 재시도)
+WORKFLOW_E2E_PORT=4174 npm run test:e2e  43 passed (56.3s, 권한 상승 재시도)
 git diff --check                     통과
 ```
 
