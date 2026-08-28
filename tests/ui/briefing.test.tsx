@@ -5,18 +5,39 @@ import { axe } from "vitest-axe";
 import * as axeMatchers from "vitest-axe/matchers";
 import { App } from "../../src/App";
 import { ModalDialog } from "../../src/components/ModalDialog";
+import { scenarioCatalog } from "../../src/data/scenarios";
 
 expect.extend(axeMatchers);
 
 it("progressively reveals the learner briefing", () => {
   render(<App />);
-  expect(screen.getAllByTestId("task-summary-item")).toHaveLength(6);
+  const summaryItems = screen.getAllByTestId("task-summary-item");
+  expect(summaryItems).toHaveLength(scenarioCatalog[0]!.tasks.length);
+
+  const noPrerequisiteTask = summaryItems.find((item) => item.textContent?.includes("자료 확인"));
+  expect(noPrerequisiteTask).toBeDefined();
+  expect(noPrerequisiteTask).toHaveTextContent("자료 확인");
+  expect(noPrerequisiteTask).toHaveTextContent("예상 2단위");
+  expect(noPrerequisiteTask).toHaveTextContent("선행 없음");
+  expect(noPrerequisiteTask).toHaveTextContent("사람 1명");
+  expect(noPrerequisiteTask).toHaveTextContent("도구 0개 (없음)");
+
+  const resourceTask = summaryItems.find((item) => item.textContent?.includes("글 인쇄"));
+  expect(resourceTask).toBeDefined();
+  expect(resourceTask).toHaveTextContent("글 인쇄");
+  expect(resourceTask).toHaveTextContent("예상 2단위");
+  expect(resourceTask).toHaveTextContent("선행: 인쇄 글 정리");
+  expect(resourceTask).toHaveTextContent("사람 1명");
+  expect(resourceTask).toHaveTextContent("도구 1개 (프린터 1개)");
 
   const details = [...document.querySelectorAll<HTMLDetailsElement>(".task-card-list details")];
-  expect(details).toHaveLength(6);
+  expect(details).toHaveLength(scenarioCatalog[0]!.tasks.length);
   expect(details[0]).toHaveAttribute("open");
   expect(details.slice(1).every((detail) => !detail.open)).toBe(true);
-  expect(screen.getByRole("button", { name: "조건 확인" })).toBeVisible();
+  const summary = screen.getByRole("region", { name: "작업 핵심 조건 요약" });
+  const cta = screen.getByRole("button", { name: "조건 확인" });
+  expect(summary.nextElementSibling).toBe(cta);
+  expect(cta).toBeVisible();
   expect(screen.getByText(/이 버튼을 누르면 관계 연결로 이동/)).toBeVisible();
   expect(screen.getAllByText(/모든 시간은 교육용/)).toHaveLength(1);
 });

@@ -25,8 +25,10 @@ export function TaskCard({ task, scenario, defaultOpen = false }: TaskCardProps)
   return (
     <details className="task-card" open={defaultOpen}>
       <summary>
-        <span className="task-card__summary-title">{task.title}</span>
-        <span className="task-card__summary-meta">{`예상 시간 ${task.duration}단위 · ${prerequisiteSummary} · 필요한 사람 ${task.peopleRequired}명 · 도구 ${resourceCount}개${resourceCount > 0 ? ` (${resourceSummary})` : ""}`}</span>
+        <span className="task-card__summary-content">
+          <span className="task-card__summary-title">{task.title}</span>
+          <span className="task-card__summary-meta">{`예상 시간 ${task.duration}단위 · ${prerequisiteSummary} · 필요한 사람 ${task.peopleRequired}명 · 도구 ${resourceCount}개${resourceCount > 0 ? ` (${resourceSummary})` : ""}`}</span>
+        </span>
       </summary>
       <article className="task-card__body" aria-labelledby={headingId}>
         <h4 id={headingId}>{task.title}</h4>

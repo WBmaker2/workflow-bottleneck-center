@@ -121,9 +121,9 @@ describe("accessible learning shell", () => {
   it("names the briefing summary controls and keeps one required pulse", () => {
     renderAtStage("briefing");
     expect(screen.getByRole("heading", { name: "작업 핵심 조건 요약" })).toBeInTheDocument();
-    const summaries = [...document.querySelectorAll(".task-card-list details > summary")];
+    const summaries = [...document.querySelectorAll<HTMLElement>(".task-card-list details > summary")];
     expect(summaries).toHaveLength(primaryScenario.tasks.length);
-    expect(summaries.every((summary) => summary.textContent?.trim())).toBe(true);
+    summaries.forEach((summary) => expect(summary).toHaveAccessibleName(/.+/));
     expect(screen.getByRole("button", { name: "조건 확인" })).toHaveAccessibleName("조건 확인");
     expect(document.querySelectorAll('[data-pulse="true"]')).toHaveLength(1);
   });

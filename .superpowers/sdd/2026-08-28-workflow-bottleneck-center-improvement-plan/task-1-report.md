@@ -76,3 +76,46 @@ git diff --check
 - Vitest 실행 중 기존 jsdom canvas 경고(`HTMLCanvasElement's getContext() method`)가 출력되지만 테스트 실패나 새 기능 오류는 아니었습니다.
 - 이번 범위에서는 VoiceOver 및 수동 브라우저 시각 검증을 수행하지 않았습니다.
 - Push, GitHub Pages 배포, HVC 등록은 요청 범위 밖이므로 수행하지 않았습니다.
+
+## 수정 라운드 보고서 — 리뷰 FAIL 반영
+
+### 반영 내용
+
+- `src/features/briefing/TaskCard.tsx`, `src/styles/components.css`
+  - native `<summary>`의 disclosure marker를 보존하도록 summary를 `display: list-item`으로 복원했습니다.
+  - 두 summary 텍스트는 `.task-card__summary-content` grid wrapper 안에 배치했습니다.
+- `src/features/briefing/BriefingScreen.tsx`, `tests/ui/briefing.test.tsx`
+  - 가상 시간 문단을 TaskCardSummary 앞쪽으로 이동해 DOM상 `TaskCardSummary`의 다음 형제가 `조건 확인` CTA가 되도록 했습니다.
+  - 테스트에서 `summary.nextElementSibling`이 CTA인지 검증합니다.
+- `src/styles/components.css`, `e2e/learner-improvements.spec.ts`
+  - compact summary의 세로 공간을 줄여 375px에서도 첫 행동이 빠르게 보이게 했습니다.
+  - 375px에서 `getBoundingClientRect().top + window.scrollY < 1800`을 검사하는 briefing 전용 Playwright 테스트를 추가했습니다.
+- `tests/ui/briefing.test.tsx`
+  - 하드코딩한 6 대신 primary scenario 작업 수를 사용하고, `자료 확인` 및 `글 인쇄`의 title/time/prerequisite/people/tool 실제 문구를 검증합니다.
+- `tests/ui/accessibility.test.tsx`
+  - 모든 작업 summary에 `toHaveAccessibleName(/.+/)`을 적용했습니다.
+- `src/styles/components.css`
+  - summary list 항목의 연속 중복 selector를 하나의 규칙으로 합쳤습니다.
+
+### 수정 라운드 검증 순서와 결과
+
+1. 보강 테스트 실행 결과, CTA 직접 형제 assertion이 실패했습니다. 기존 DOM은 `TaskCardSummary → virtual-time 문단 → CTA`였고, CTA 위치 E2E는 `2015.296875px`, compact 조정 후 `1864.296875px`로 기준을 초과했습니다.
+2. DOM 순서와 native marker를 수정하고 compact summary를 적용했습니다.
+3. `npm test -- tests/ui/briefing.test.tsx tests/ui/accessibility.test.tsx` — 2개 파일, 40개 테스트 통과.
+4. `npm run test:e2e -- e2e/learner-improvements.spec.ts` — 1개 테스트 통과. 375px CTA 문서 위치가 1800px 미만임을 확인했습니다.
+5. `npm test` — 전체 18개 파일, 175개 테스트 통과.
+6. `npm run typecheck` — 통과.
+7. `npm run lint` — 통과.
+8. `npm run check:file-length` — 88개 파일 검사, 최대 499줄 통과.
+9. `npm run build` — 82개 모듈 production build 통과.
+10. `git diff --check` — 통과.
+
+### 수정 라운드 우려
+
+- Vitest에는 기존 jsdom canvas `getContext()` 미구현 경고가 계속 출력되지만 테스트 실패는 없습니다.
+- 375px Playwright assertion은 통과했으나 VoiceOver와 별도 수동 시각 검증은 요청 제약에 따라 수행하지 않았습니다.
+- Push·배포·HVC 등록은 수행하지 않았습니다.
+
+### 추가 확인
+
+- 마지막 코드 상태에서 `npx playwright test e2e/learner-improvements.spec.ts --config=/private/tmp/workflow-bottleneck-task1-playwright.config.ts`를 실행해 `4174` 임시 포트에서 1개 테스트 통과를 확인했습니다. 기본 `4173` 포트는 직전 실행 잔류 충돌로 재시도 시 webServer 기동이 차단되어 임시 설정을 사용했습니다.
