@@ -10,7 +10,7 @@
   - `WORKFLOW_E2E_PORT`를 숫자·1024~65535 범위로 검증하고 잘못된 값은 기본 4173으로 되돌립니다.
   - 동일 포트를 `baseURL`, preview command, web server URL에 사용합니다.
 - `e2e/learner-improvements.spec.ts`
-  - 375px CTA y `< 1,800`, static footer trigger non-overlap, selected scenario computed style, 관계 필수 목록·보조 그래프 숨김, 일정 단계 목록 기본, 단계별 도움말, same-origin request·console/page error, reduced-motion computed style, print controls exclusion을 고정했습니다.
+  - 375px CTA y `< 1,800`, static footer 문서 흐름 trigger non-overlap, selected scenario computed style, 관계 필수 목록·보조 그래프 숨김, 일정 단계 목록 기본, 7개 단계별 제목·고유 도움말 문장, 네 시나리오 전체 경로의 same-origin request·console/page error, reduced-motion computed style, print controls exclusion을 고정했습니다.
   - 하위 경로 이동은 `page.goto("./")`로 통일했습니다.
 - `e2e/accessibility-responsive.spec.ts`, `e2e/update-history.spec.ts`, `e2e/keyboard-mobile.spec.ts`, `e2e/persistence.spec.ts`
   - stage/report와 병목 heading을 exact selector로 만들고, 업데이트 버튼은 static footer 내부에서 찾도록 했습니다.
@@ -19,7 +19,8 @@
 - `docs/qa/learner-usability-verification.md`, `README.md`, `2026-08-26-workflow-bottleneck-center-design.md`
   - 375px·키보드·reduced-motion·외부 요청·인쇄 검증 범위와 환경 한계를 동기화했습니다.
   - 모바일 관계/일정 목록 우선 문구와 2026-08-28 최신 기록을 반영하고 설계 문서 placeholder를 제거했습니다.
-- Task 4·5 보고서의 당시 실패와 수치는 `historical pre-fix`로 명시했습니다. `src/data/updateHistory.ts`의 2026-08-28 항목은 기존의 정확히 한 개를 유지했습니다.
+  - 업데이트 내역은 static footer의 문서 흐름으로 기록하고, `gi-pulse` 필수 행동 ID는 `confirm-conditions`, `confirm-relations`, `run-simulation`, `mark-bottleneck`, `compare-revision`으로 통일했습니다. VoiceOver 구현·검증은 이번 범위에서 제외했습니다.
+  - Task 4·5 보고서의 당시 실패와 수치는 `historical pre-fix`로 명시했습니다. `src/data/updateHistory.ts`의 2026-08-28 항목은 기존의 정확히 한 개를 유지했습니다.
 
 ## TDD 및 검증
 
@@ -37,23 +38,23 @@ Test Files 19 passed · Tests 190 passed
 기존 jsdom HTMLCanvasElement.getContext() 미구현 경고만 출력
 
 npm run check:file-length
-Checked 98 source files (max 499 lines)
+Checked 98 source files (allowance: max 499 lines; longest current file: 433 lines)
 
 npm run build
 vite build succeeded
 
-WORKFLOW_E2E_PORT=4174 npm run test:e2e
-40 passed (57.5s, 권한 상승 재시도)
+WORKFLOW_E2E_PORT=4174 npm run test:e2e -- e2e/learner-improvements.spec.ts
+12 passed (1.4m, 권한 상승 재시도)
 
 git diff --check
 passed
 ```
 
-4173 점유 프로세스는 종료하지 않았습니다. 일반 sandbox의 첫 실행에서는 이 macOS 환경의 Playwright Chromium이 `bootstrap_check_in ... Permission denied (1100)`로 시작 직후 종료되었으나, 권한 상승 재시도에서 40/40 통과했습니다. 초기 오류는 앱 assertion 실패가 아닌 브라우저 호스트 권한 차이였고 최종 E2E 결과는 통과로 기록합니다.
+4173 점유 프로세스는 종료하지 않았습니다. 일반 sandbox의 첫 실행에서는 이 macOS 환경의 Playwright Chromium이 `bootstrap_check_in ... Permission denied (1100)`로 시작 직후 종료되었으나, 권한 상승 재시도에서 learner-improvements 12/12가 통과했습니다. 초기 오류는 앱 assertion 실패가 아닌 브라우저 호스트 권한 차이였고 최종 learner E2E 결과는 통과로 기록합니다.
 
 ## 파일 길이·범위
 
-검사 대상 소스·설정·테스트 파일은 모두 500줄 미만이며 최대 499줄입니다. 외부 기능, 학생 음성 기능, VoiceOver 구현·검증, 사람 대상 승인으로 범위를 확장하지 않았습니다.
+검사 대상 소스·설정·테스트 파일은 모두 허용 한도 499줄 이하이며, 현재 최장 파일은 433줄입니다. 외부 기능, 학생 음성 기능, VoiceOver 구현·검증, 사람 대상 승인으로 범위를 확장하지 않았습니다.
 
 ## 커밋
 

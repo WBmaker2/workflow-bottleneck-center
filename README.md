@@ -50,10 +50,12 @@
 ## 접근성·사용 안내
 
 - **키보드**: Tab/Shift+Tab으로 이동하고 Enter 또는 Space로 버튼·체크박스·라디오를 조작합니다. 화살표 키로 native select와 라디오 선택을 바꿀 수 있습니다. 모든 작업·시점·담당 선택은 드래그 없이 가능합니다.
-- **375px 화면**: 관계 의미 목록과 일정 단계 목록을 우선 제공하며 시간축은 필요시 가로로 봅니다. `요약 보기` 패널로 설명을 다시 열 수 있습니다.
+- **375px 화면**: 관계는 의미 목록을 먼저 제공하고 그래프는 보조물로 숨기며, 일정은 단계 목록을 먼저 제공합니다. 시간축은 필요할 때 가로로 봅니다. `요약 보기` 패널로 설명을 다시 열 수 있습니다.
 - **스크린 리더**: `lang="ko"`, 단계 제목, 선행 관계의 텍스트 목록, 상태 `aria-live` 안내를 사용합니다. 색상만으로 관계·대기·안전 상태를 구분하지 않습니다.
 - **모션 감소**: 운영체제에서 `prefers-reduced-motion: reduce`를 켜면 `gi-pulse` 깜빡임과 자동 진행 대신 정적 윤곽선과 수동 단계 이동을 사용합니다.
-- 화면 오른쪽 아래의 **업데이트 내역** 버튼에서 설계·개발 기록을 확인할 수 있습니다.
+- 단계별 필수 행동 버튼에는 `gi-pulse`를 적용하며 ID는 `confirm-conditions`, `confirm-relations`, `run-simulation`, `mark-bottleneck`, `compare-revision`입니다.
+- **업데이트 내역** 버튼은 화면 콘텐츠를 가리지 않는 static footer의 문서 흐름에 있으며, 설계·개발 기록을 엽니다.
+- VoiceOver 구현과 VoiceOver 검증은 이번 범위에 포함하지 않습니다.
 
 ## 로컬 실행 명령
 
@@ -112,4 +114,4 @@ npm run verify
 
 ## GitHub Pages 배포
 
-`.github/workflows/deploy-pages.yml` 워크플로는 `main` 브랜치 push 또는 수동 실행 시 `npm ci`, `npm run verify`, 프로덕션 빌드를 수행한 뒤 GitHub Pages에 배포하도록 구성되어 있습니다. 공개 프로젝트 주소는 <https://wbmaker2.github.io/workflow-bottleneck-center/>입니다. 2026-08-27 workflow run [33046834902](https://github.com/WBmaker2/workflow-bottleneck-center/actions/runs/33046834902)에서 배포가 성공했고, HTML·favicon·JS·CSS 응답과 375px 키보드 전용 과학 미션 완주 경로를 확인했습니다. 모바일 전체 VoiceOver spoken evidence는 QA 문서의 조건부 게이트로 유지합니다.
+`.github/workflows/deploy-pages.yml` 워크플로는 `main` 브랜치 push 또는 수동 실행 시 `npm ci`, `npm run verify`, 프로덕션 빌드를 수행한 뒤 GitHub Pages에 배포하도록 구성되어 있습니다. 공개 프로젝트 주소는 <https://wbmaker2.github.io/workflow-bottleneck-center/>입니다. 2026-08-27 workflow run [33047165398](https://github.com/WBmaker2/workflow-bottleneck-center/actions/runs/33047165398)에서 배포가 성공했고, HTML·favicon·JS·CSS 응답과 375px 키보드 전용 과학 미션 완주 경로를 확인했습니다. VoiceOver 구현·검증은 이번 범위에 포함하지 않습니다.

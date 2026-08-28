@@ -192,7 +192,7 @@ const selectRole = async (page: Page, roleId: RoleId): Promise<void> => {
   await pressCheckable(page, page.getByRole("checkbox", { name: `역할 ${roleId}` }));
 };
 
-const addRequiredRelations = async (page: Page, scenarioId: ScenarioId): Promise<void> => {
+export const addRequiredRelations = async (page: Page, scenarioId: ScenarioId): Promise<void> => {
   const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;
   for (const edge of requiredEdgesFromScenario(scenario)) {
     await chooseSelectValue(page, "다음에 시작할 작업", edge.afterTaskId);
@@ -205,7 +205,7 @@ const addRequiredRelations = async (page: Page, scenarioId: ScenarioId): Promise
   await pressButton(page, "관계 확인");
 };
 
-const placeEntries = async (page: Page, scenarioId: ScenarioId, entries: readonly ScheduleEntry[]): Promise<void> => {
+export const placeEntries = async (page: Page, scenarioId: ScenarioId, entries: readonly ScheduleEntry[]): Promise<void> => {
   const scenario = scenarioCatalog.find(({ id }) => id === scenarioId)!;
   for (const planned of entries) {
     await chooseSelectValue(page, "배치할 작업", planned.taskId);

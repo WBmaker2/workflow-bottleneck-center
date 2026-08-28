@@ -3,7 +3,60 @@ import { createInitialState } from "../src/app/appReducer";
 import { scenarioCatalog } from "../src/data/scenarios";
 import { requiredEdgesFromScenario } from "../src/domain/scenarioValidation";
 import { encodeProgress } from "../src/storage/progressCodec";
-import { completeMissionByKeyboard, installKeyboardSelectSupport, missionSolutions } from "./fixtures/missionSolutions";
+import {
+  addRequiredRelations,
+  completeMissionByKeyboard,
+  installKeyboardSelectSupport,
+  installPointerFailureGuard,
+  missionSolutions,
+  placeEntries,
+  pressButton,
+} from "./fixtures/missionSolutions";
+
+const stageHelpExpectations = [
+  {
+    title: "안내 단계 도움말",
+    whatToDo: "작업 카드에서 시간, 필요한 사람과 도구, 먼저 할 일을 살펴보세요.",
+    successHint: "안전과 품질 조건을 확인한 뒤 ‘조건 확인’을 누르면 관계를 연결할 수 있어요.",
+  },
+  {
+    title: "관계 설계 단계 도움말",
+    whatToDo: "어떤 작업을 먼저 끝내야 다음 작업을 시작할 수 있는지 선으로 연결하세요.",
+    successHint: "필수 관계를 빠뜨리지 않고 서로 기다리는 순환을 만들지 않으면 일정표로 갈 수 있어요.",
+  },
+  {
+    title: "일정표 단계 도움말",
+    whatToDo: "모든 작업의 시작 시점과 필요한 역할을 정해 시간표에 배치하세요.",
+    successHint: "모든 작업이 관계와 역할 조건에 맞게 놓이면 ‘실행’으로 결과를 살펴볼 수 있어요.",
+  },
+  {
+    title: "가상 실행 단계 도움말",
+    whatToDo: "시간을 한 칸씩 움직이며 작업이 시작하고 멈추는 순간을 관찰하세요.",
+    successHint: "기다림이 보이면 왜 멈췄는지 예측하고 실행 기록과 비교해 보세요.",
+  },
+  {
+    title: "병목 분석 단계 도움말",
+    whatToDo: "뒤 작업을 늦춘 기다림의 원인을 찾아 병목으로 표시하세요.",
+    successHint: "오래 걸린 작업이 아니라 다른 작업을 실제로 늦춘 원인을 고르면 수정할 수 있어요.",
+  },
+  {
+    title: "수정 단계 도움말",
+    whatToDo: "찾은 병목을 줄이는 새 일정을 만들고 안전·품질·역할 조건도 지키세요.",
+    successHint: "처음 일정과 수정 일정을 실행해 비교하면 무엇이 달라졌는지 알 수 있어요.",
+  },
+  {
+    title: "개선 보고서 단계 도움말",
+    whatToDo: "처음과 수정 결과를 비교하고, 왜 그렇게 바꿨는지 네 문장으로 설명하세요.",
+    successHint: "안전·품질·협력·시간을 함께 지킨 근거를 모두 적으면 오늘 배운 내용을 정리할 수 있어요.",
+  },
+] as const;
+
+const expectStageHelp = async (page: import("@playwright/test").Page, expected: (typeof stageHelpExpectations)[number]): Promise<void> => {
+  const panel = page.locator(".stage-help-panel");
+  await expect(panel.getByRole("heading", { name: expected.title, exact: true })).toBeVisible();
+  await expect(panel.locator("dd").nth(0)).toHaveText(expected.whatToDo);
+  await expect(panel.locator("dd").nth(1)).toHaveText(expected.successHint);
+};
 
 test("375px briefing keeps the first action within the opening viewport flow", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
@@ -60,28 +113,64 @@ test("mobile update trigger stays below the stage without overlap", async ({ pag
   expect(triggerBox!.y).toBeGreaterThanOrEqual(stageBox!.y + stageBox!.height);
 });
 
-test("each learner stage presents stage-specific help", async ({ page }) => {
+test("each learner stage presents its title and unique help copy", async ({ page }) => {
+  const solution = missionSolutions["science-display"];
   await page.setViewportSize({ width: 375, height: 812 });
+  await installKeyboardSelectSupport(page);
+  await installPointerFailureGuard(page);
+  await page.addInitScript(() => localStorage.removeItem("workflow-bottleneck-center:progress:v1"));
   await page.goto("./");
-  await expect(page.getByRole("heading", { name: "안내 단계 도움말", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "조건 확인" }).click();
-  await expect(page.getByRole("heading", { name: "관계 설계 단계 도움말", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "안내 단계 도움말", exact: true })).toHaveCount(0);
+  await expectStageHelp(page, stageHelpExpectations[0]!);
+  await pressButton(page, "조건 확인");
+  await expectStageHelp(page, stageHelpExpectations[1]!);
+  await addRequiredRelations(page, solution.scenarioId);
+  await expectStageHelp(page, stageHelpExpectations[2]!);
+  await placeEntries(page, solution.scenarioId, solution.initialEntries);
+  await pressButton(page, "실행");
+  await expectStageHelp(page, stageHelpExpectations[3]!);
+  await pressButton(page, "가상 실행 시작");
+  const waitReason = await page.locator("input[name='wait-reason']").first().getAttribute("value");
+  expect(waitReason).toBeTruthy();
+  await page.locator(`input[name='wait-reason'][value='${waitReason}']`).focus();
+  await page.keyboard.press("Space");
+  await page.getByLabel("기다림을 예상한 이유 (10자 이상)").focus();
+  await page.keyboard.type("작업 카드의 조건을 살펴보면 알 수 있습니다");
+  await pressButton(page, "예측 저장");
+  await pressButton(page, "분석으로 이동");
+  await expectStageHelp(page, stageHelpExpectations[4]!);
+  await page.locator("input[name='bottleneck-finding']").first().focus();
+  await page.keyboard.press("Space");
+  await pressButton(page, "병목 표시");
+  await pressButton(page, "수정 시작");
+  await expectStageHelp(page, stageHelpExpectations[5]!);
+  await placeEntries(page, solution.scenarioId, solution.revisedEntries);
+  await pressButton(page, "수정안 실행·비교");
+  await pressButton(page, "보고서 작성");
+  await expectStageHelp(page, stageHelpExpectations[6]!);
 });
 
-test("learner flow stays same-origin and emits no console or page errors", async ({ page }) => {
-  const requests: string[] = [];
-  const consoleErrors: string[] = [];
-  const pageErrors: string[] = [];
-  page.on("request", (request) => requests.push(request.url()));
-  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  await page.goto("./");
-  const origin = new URL(page.url()).origin;
-  expect(requests.filter((url) => !url.startsWith(`${origin}/`) && url !== origin)).toEqual([]);
-  expect(consoleErrors).toEqual([]);
-  expect(pageErrors).toEqual([]);
-});
+for (const scenarioId of ["science-display", "library-cart", "class-presentation", "eco-campaign-booth"] as const) {
+  test(`${scenarioId} full 375px learner flow stays same-origin and error-free`, async ({ page }) => {
+    const requests: string[] = [];
+    const consoleErrors: string[] = [];
+    const pageErrors: string[] = [];
+    page.on("request", (request) => requests.push(request.url()));
+    page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await installKeyboardSelectSupport(page);
+    await installPointerFailureGuard(page);
+    await page.addInitScript(() => localStorage.removeItem("workflow-bottleneck-center:progress:v1"));
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("./");
+    await completeMissionByKeyboard(page, missionSolutions[scenarioId]);
+    await expect(page.getByRole("heading", { name: "개선 보고서", exact: true })).toBeVisible();
+    await page.waitForTimeout(50);
+    const origin = new URL(page.url()).origin;
+    expect(requests.filter((url) => !url.startsWith(`${origin}/`) && url !== origin)).toEqual([]);
+    expect(consoleErrors).toEqual([]);
+    expect(pageErrors).toEqual([]);
+  });
+}
 
 test("375px relations show the required meaning list before the helper graph", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });

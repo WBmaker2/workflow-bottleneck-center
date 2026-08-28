@@ -70,7 +70,7 @@
 
 ## 파일 길이
 
-변경 source 파일은 모두 499줄 이하입니다. 주요 파일은 `EvidenceForm.tsx` 197줄, `components.css` 433줄, `report.css` 90줄, `ReportLearningWrapUp.tsx` 40줄입니다.
+변경 source 파일은 모두 499줄 이하입니다. 주요 파일은 `EvidenceForm.tsx` 197줄, `components.css` 433줄, `report.css` 90줄, `ReportLearningWrapUp.tsx` 50줄입니다.
 
 ## 우려 및 미수행 항목
 
