@@ -50,10 +50,12 @@
 ## 접근성·사용 안내
 
 - **키보드**: Tab/Shift+Tab으로 이동하고 Enter 또는 Space로 버튼·체크박스·라디오를 조작합니다. 화살표 키로 native select와 라디오 선택을 바꿀 수 있습니다. 모든 작업·시점·담당 선택은 드래그 없이 가능합니다.
-- **375px 화면**: 관계 설계판과 일정표는 각각 한 화면에서 확인하며, `요약 보기` 패널로 설명을 다시 엽니다. 가로 스크롤 없이 단계 흐름을 완료할 수 있도록 설계했습니다.
+- **375px 화면**: 관계는 의미 목록을 먼저 제공하고 그래프는 보조물로 숨기며, 일정은 단계 목록을 먼저 제공합니다. 시간축은 필요할 때 가로로 봅니다. `요약 보기` 패널로 설명을 다시 열 수 있습니다.
 - **스크린 리더**: `lang="ko"`, 단계 제목, 선행 관계의 텍스트 목록, 상태 `aria-live` 안내를 사용합니다. 색상만으로 관계·대기·안전 상태를 구분하지 않습니다.
 - **모션 감소**: 운영체제에서 `prefers-reduced-motion: reduce`를 켜면 `gi-pulse` 깜빡임과 자동 진행 대신 정적 윤곽선과 수동 단계 이동을 사용합니다.
-- 화면 오른쪽 아래의 **업데이트 내역** 버튼에서 설계·개발 기록을 확인할 수 있습니다.
+- 단계별 필수 행동 버튼에는 `gi-pulse`를 적용하며 ID는 `confirm-conditions`, `confirm-relations`, `run-simulation`, `mark-bottleneck`, `compare-revision`입니다.
+- **업데이트 내역** 버튼은 화면 콘텐츠를 가리지 않는 static footer의 문서 흐름에 있으며, 설계·개발 기록을 엽니다.
+- VoiceOver 구현과 VoiceOver 검증은 이번 범위에 포함하지 않습니다.
 
 ## 로컬 실행 명령
 
@@ -64,10 +66,13 @@ npm ci
 npm run dev
 npm run test
 npm run test:e2e
+WORKFLOW_E2E_PORT=4174 npm run test:e2e
+WORKFLOW_E2E_PORT=4174 WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1 npm run test:e2e  # native-select probe=false 환경의 명시적 opt-in
 npm run verify
 ```
 
 개발 서버는 기본적으로 Vite 주소 `http://127.0.0.1:5173`에서 열립니다. `npm run test:e2e`는 빌드 후 Chromium으로 Playwright 경로를 실행합니다. 필요하면 한 번 `npx playwright install chromium`으로 브라우저를 설치합니다.
+기본 no-env E2E는 native-select probe 결과를 그대로 드러내며, probe가 실패한 호스트에서만 `WORKFLOW_E2E_ALLOW_SELECT_FALLBACK=1`을 명시합니다. 이 opt-in 결과는 해당 환경에 한정된 보조 증거입니다.
 
 ## 테스트 매트릭스
 
@@ -78,7 +83,7 @@ npm run verify
 | 단위·UI | `npm run test` | 도메인, reducer, 저장, React UI, 아키텍처 가드 |
 | 파일 크기 | `npm run check:file-length` | `src`, `tests`, `e2e`, `scripts` 각 소스 499줄 이하 |
 | 프로덕션 빌드 | `npm run build` | 타입 검사와 Vite `dist` 생성 |
-| 통합 학습 경로 | `npm run test:e2e` | 네 미션, 키보드·모바일·저장·업데이트 내역 |
+| 통합 학습 경로 | `WORKFLOW_E2E_PORT=4174 npm run test:e2e` | 네 미션, 키보드·모바일·저장·업데이트 내역·인쇄; 기본 no-env strict gate |
 | 전체 로컬 검증 | `npm run verify` | lint → typecheck → Vitest → 파일 크기 → build |
 
 `tests/architecture/noExternalServices.test.ts`는 외부 서비스 호출, 개인 식별 필드, 도메인 계층의 브라우저·React 의존, 시뮬레이터의 비결정성, 금지된 경쟁·생산성·휴식 문구, 시나리오 4종, 업데이트 날짜 형식을 고정합니다.
@@ -102,7 +107,17 @@ npm run verify
 
 - 코드 파일은 기능별 책임을 분리하며 `src`, `tests`, `e2e`, `scripts`의 `.ts`, `.tsx`, `.css`, `.mjs` 파일은 500줄이 되기 전에 나눕니다. 검사 기준은 **499줄 이하**입니다.
 - 화면이나 판정 규칙을 바꿀 때는 `src/data/updateHistory.ts`에 실제 변경 날짜(`YYYY-MM-DD`)와 짧은 내역을 추가합니다. 앱의 업데이트 내역 버튼은 이 기록을 보여 줍니다.
+- 최신 개선 기록(2026-08-29): 공통 마스트헤드·7단계 진행 트랙·미션 요약·활동별 관찰 카드와 모바일 읽기 순서를 개선하고 375px·키보드·reduced-motion·외부 요청·인쇄 회귀 게이트를 보강했습니다.
+- 최신 보완 기록(2026-08-30): 상태를 나타내는 두꺼운 좌측 포인트 테두리를 상단 경계·배경 토큰으로 정돈하고 근거 진행률을 레이아웃 폭 전환 없이 transform으로 움직이도록 다듬었습니다.
 - 안전·품질·역할 공정성의 근거는 화면과 테스트에서 함께 확인하며, 실제 사람에 대한 승인·측정·순위를 주장하지 않습니다.
+
+이번 안전 리디자인의 감사·계획·자산·검증 원장은 다음 문서에 기록되어 있습니다.
+
+- `PRODUCT.md`
+- `work/education-webapp-redesign-audit.md`
+- `work/education-webapp-redesign-plan.md`
+- `work/education-webapp-redesign-assets.md`
+- `work/education-webapp-redesign-report.md`
 
 ## 범위 밖 기능과 현재 계획의 경계
 
@@ -110,4 +125,4 @@ npm run verify
 
 ## GitHub Pages 배포
 
-`.github/workflows/deploy-pages.yml` 워크플로는 `main` 브랜치 push 또는 수동 실행 시 `npm ci`, `npm run verify`, 프로덕션 빌드를 수행한 뒤 GitHub Pages에 배포하도록 구성되어 있습니다. 공개 프로젝트 주소는 <https://wbmaker2.github.io/workflow-bottleneck-center/>입니다. 2026-08-27 workflow run [33046834902](https://github.com/WBmaker2/workflow-bottleneck-center/actions/runs/33046834902)에서 배포가 성공했고, HTML·favicon·JS·CSS 응답과 375px 키보드 전용 과학 미션 완주 경로를 확인했습니다. 모바일 전체 VoiceOver spoken evidence는 QA 문서의 조건부 게이트로 유지합니다.
+`.github/workflows/deploy-pages.yml` 워크플로는 `main` 브랜치 push 또는 수동 실행 시 `npm ci`, `npm run verify`, 프로덕션 빌드를 수행한 뒤 GitHub Pages에 배포하도록 구성되어 있습니다. 공개 프로젝트 주소는 <https://wbmaker2.github.io/workflow-bottleneck-center/>입니다. 2026-08-27 workflow run [33047165398](https://github.com/WBmaker2/workflow-bottleneck-center/actions/runs/33047165398)에서 배포가 성공했고, HTML·favicon·JS·CSS 응답과 375px 키보드 전용 과학 미션 완주 경로를 확인했습니다. VoiceOver 구현·검증은 이번 범위에 포함하지 않습니다.

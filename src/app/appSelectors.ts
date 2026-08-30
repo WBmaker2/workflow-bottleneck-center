@@ -7,6 +7,8 @@ import type { LearningStage, MissionAttempt } from "./appTypes";
 
 const stages: readonly LearningStage[] = ["briefing", "relations", "schedule", "simulation", "analysis", "revision", "report"];
 
+export type RequiredActionId = "confirm-conditions" | "confirm-relations" | "run-simulation" | "mark-bottleneck" | "compare-revision";
+
 const relationReady = (attempt: MissionAttempt): boolean => {
   const validation = validateRelationMap(getScenario(attempt.scenarioId), attempt.relationEdges);
   return validation.missingRequired.length === 0
@@ -62,9 +64,10 @@ export function canEnterStage(attempt: MissionAttempt, stage: LearningStage): bo
   }
 }
 
-export function getRequiredAction(attempt: MissionAttempt): "confirm-conditions" | "run-simulation" | "mark-bottleneck" | "compare-revision" | null {
+export function getRequiredAction(attempt: MissionAttempt): RequiredActionId | null {
   switch (attempt.stage) {
     case "briefing": return "confirm-conditions";
+    case "relations": return "confirm-relations";
     case "schedule": return "run-simulation";
     case "analysis": return attempt.initialSnapshot === null || attempt.initialSnapshot.bottlenecks.findings.length > 0 ? "mark-bottleneck" : null;
     case "revision": return "compare-revision";

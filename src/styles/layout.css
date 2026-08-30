@@ -10,7 +10,12 @@ main {
   color: var(--color-ink-muted);
 }
 
-nav ul {
+.app-masthead { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); }
+.app-eyebrow { margin-bottom: var(--space-1); color: var(--color-primary-dark); font-size: .9rem; font-weight: 800; }
+.app-learning-question { max-width: var(--reading-width); margin-bottom: 0; font-size: 1.1rem; font-weight: 700; }
+.virtual-time-pill, .stage-chip { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 var(--space-3); border: 2px solid var(--color-primary); border-radius: 999px; color: var(--color-primary-dark); background: var(--color-primary-bg); font-weight: 800; white-space: nowrap; }
+
+.scenario-navigation ul {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -19,11 +24,11 @@ nav ul {
   list-style: none;
 }
 
-nav li {
+.scenario-navigation li {
   min-width: 0;
 }
 
-nav button {
+.scenario-navigation button {
   max-width: 100%;
   overflow-wrap: anywhere;
 }
@@ -56,12 +61,71 @@ nav button {
   background: var(--color-paper);
 }
 
+.app-workspace { display: grid; grid-template-columns: minmax(12rem, var(--rail-width)) minmax(0, 1fr); gap: var(--stage-gap); align-items: start; margin-top: var(--space-6); }
+.stage-progress { min-width: 0; max-width: 100%; overflow: hidden; padding: var(--space-4); border: 2px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); }
+.stage-progress h2 { font-size: 1.15rem; }
+.stage-progress ol { display: grid; gap: var(--space-2); padding: 0; margin: 0; list-style: none; }
+.stage-progress__item { display: grid; grid-template-columns: 2rem minmax(0,1fr) auto; gap: var(--space-2); align-items: center; min-height: var(--control-height); padding: var(--space-2); border-top: 3px solid transparent; color: var(--color-ink-muted); }
+.stage-progress__item--current { border-top-color: var(--color-primary); color: var(--color-ink); background: var(--color-primary-bg); font-weight: 800; }
+.stage-progress__item--complete { color: var(--color-quality); }
+.stage-progress__number { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--color-disabled-bg); font-weight: 800; }
+.stage-progress__item--current .stage-progress__number { color: white; background: var(--color-primary); }
+.stage-frame { min-width: 0; padding: clamp(var(--space-4), 4vw, var(--space-6)); border: 2px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-paper); }
+.stage-frame__heading { display: flex; justify-content: space-between; gap: var(--space-3); align-items: start; }
+.stage-frame__heading p { margin-bottom: var(--space-3); color: var(--color-ink-muted); }
+
+@media (min-width: 601px) {
+  .stage-frame { margin-top: 0; }
+}
+
 .stage-shell > h2 {
   margin-bottom: var(--space-1);
 }
 
 .stage-shell > p {
   color: var(--color-ink-muted);
+}
+
+.stage-help-panel {
+  display: grid;
+  gap: var(--space-2);
+  max-width: var(--reading-width);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-line);
+  border-top: 5px solid var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.stage-help-panel h3 {
+  margin-bottom: 0;
+}
+
+.stage-help-panel dl {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: 0;
+}
+
+.stage-help-panel dl > div {
+  display: grid;
+  grid-template-columns: minmax(6rem, auto) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.stage-help-panel dt {
+  font-weight: 800;
+}
+
+.stage-help-panel dd {
+  margin: 0;
+}
+
+.app-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 2px solid var(--color-line);
 }
 
 .briefing-screen,
@@ -75,6 +139,10 @@ nav button {
   min-width: 0;
   gap: var(--space-4);
   max-width: var(--reading-width);
+}
+
+.briefing-screen > .required-action {
+  justify-self: start;
 }
 
 .stage-layout,
@@ -96,6 +164,10 @@ nav button {
 .revision-screen > *,
 .report-screen > * {
   min-width: 0;
+}
+
+.relation-board {
+  overflow: hidden;
 }
 
 .mobile-summary-panel {
@@ -128,6 +200,20 @@ nav button {
     padding: var(--space-3);
   }
 
+  .app-workspace { display: block; margin-top: var(--space-4); }
+  .stage-progress { margin-bottom: var(--space-3); padding: var(--space-2); }
+  .stage-progress h2 { margin-bottom: var(--space-1); font-size: 1rem; }
+  .stage-progress ol { grid-template-columns: repeat(7, minmax(4rem, 1fr)); gap: 2px; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+  .stage-progress__item { display: flex; flex-direction: column; min-width: 4rem; min-height: 3.25rem; padding: 2px var(--space-1); border-top: 0; border-bottom: 3px solid transparent; text-align: center; font-size: .78rem; line-height: 1.15; }
+  .stage-progress__item--current { border-bottom-color: var(--color-primary); }
+  .stage-progress__item small { font-size: .75rem; }
+  .stage-frame { padding: var(--space-3); }
+  .stage-chip { display: none; }
+
+  .briefing-screen {
+    gap: 0;
+  }
+
   .stage-layout {
     display: block;
   }
@@ -137,17 +223,39 @@ nav button {
     margin-top: var(--space-4);
   }
 
-  nav ul {
+  .scenario-navigation ul {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  nav button {
+  .scenario-navigation button {
     width: 100%;
   }
 
-  .update-history-trigger {
-    right: 0.5rem;
-    bottom: max(0.5rem, var(--safe-bottom));
+  .stage-help-panel dl > div {
+    display: block;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .stage-help-panel {
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3) var(--space-1);
+  }
+
+  .stage-help-panel { max-height: 7rem; overflow: hidden; font-size: .9rem; line-height: 1.25; }
+  #save-toggle-description { max-width: 22rem; max-height: 3.1rem; overflow: hidden; line-height: 1.35; }
+
+  .stage-help-panel dl {
+    gap: 0;
+  }
+
+  .stage-help-panel dt,
+  .stage-help-panel dd {
+    display: inline;
+  }
+
+  .stage-help-panel dt::after {
+    content: ": ";
   }
 }

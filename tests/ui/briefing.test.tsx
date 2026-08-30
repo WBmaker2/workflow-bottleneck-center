@@ -5,8 +5,59 @@ import { axe } from "vitest-axe";
 import * as axeMatchers from "vitest-axe/matchers";
 import { App } from "../../src/App";
 import { ModalDialog } from "../../src/components/ModalDialog";
+import { scenarioCatalog } from "../../src/data/scenarios";
+import { TaskCardSummary } from "../../src/features/briefing/TaskCardSummary";
 
 expect.extend(axeMatchers);
+
+it("progressively reveals the learner briefing", () => {
+  render(<App />);
+  const summaryItems = screen.getAllByTestId("task-summary-item");
+  expect(summaryItems).toHaveLength(scenarioCatalog[0]!.tasks.length);
+
+  const noPrerequisiteTask = summaryItems.find((item) => item.textContent?.includes("자료 확인"));
+  expect(noPrerequisiteTask).toBeDefined();
+  expect(noPrerequisiteTask).toHaveTextContent("자료 확인");
+  expect(noPrerequisiteTask).toHaveTextContent("예상 2단위");
+  expect(noPrerequisiteTask).toHaveTextContent("선행 없음");
+  expect(noPrerequisiteTask).toHaveTextContent("사람 1명");
+  expect(noPrerequisiteTask).toHaveTextContent("도구 0개 (없음)");
+
+  const resourceTask = summaryItems.find((item) => item.textContent?.includes("글 인쇄"));
+  expect(resourceTask).toBeDefined();
+  expect(resourceTask).toHaveTextContent("글 인쇄");
+  expect(resourceTask).toHaveTextContent("예상 2단위");
+  expect(resourceTask).toHaveTextContent("선행: 인쇄 글 정리");
+  expect(resourceTask).toHaveTextContent("사람 1명");
+  expect(resourceTask).toHaveTextContent("도구 1개 (프린터 1개)");
+
+  const details = [...document.querySelectorAll<HTMLDetailsElement>(".task-card-list details")];
+  expect(details).toHaveLength(scenarioCatalog[0]!.tasks.length);
+  expect(details[0]).toHaveAttribute("open");
+  expect(details.slice(1).every((detail) => !detail.open)).toBe(true);
+  const summary = screen.getByRole("region", { name: "작업 핵심 조건 요약" });
+  const cta = screen.getByRole("button", { name: "조건 확인" });
+  expect(summary.previousElementSibling).toBe(cta);
+  expect(cta).toBeVisible();
+  expect(screen.getByText(/다음 행동: 조건을 읽고/)).toBeVisible();
+  expect(screen.getAllByText(/모든 시간은 교육용/)).toHaveLength(1);
+});
+
+it("shows each scenario's exact simulator capacity and fairness rules", () => {
+  const { rerender } = render(<TaskCardSummary scenario={scenarioCatalog[0]!} />);
+
+  for (const scenario of scenarioCatalog) {
+    rerender(<TaskCardSummary scenario={scenario} />);
+    const constraints = screen.getByRole("list", { name: "시뮬레이터가 지키는 약속" });
+    for (const resource of scenario.resources) {
+      expect(constraints).toHaveTextContent(`${resource.label}는 한 번에 ${resource.capacity}개만 쓸 수 있어요.`);
+    }
+    expect(constraints).toHaveTextContent(`최소 ${scenario.fairness.minParticipatingRoles}개 역할이 참여해야 해요.`);
+    expect(constraints).toHaveTextContent(`역할별 맡은 양 차이는 ${scenario.fairness.maxLoadGap}단위 이하여야 공정해요.`);
+    expect(screen.getAllByTestId("task-summary-item").some((item) => item.textContent?.includes("역할·도구가 겹치지 않으면 동시 진행 가능"))).toBe(true);
+    expect(screen.queryByText(/동시 가능/)).not.toBeInTheDocument();
+  }
+});
 
 function CallbackChangingDialog({ version = 1 }: { version?: number }) {
   const [open, setOpen] = useState(false);
@@ -53,8 +104,10 @@ function InertDialog({ existingInert = false }: { existingInert?: boolean }) {
   );
 }
 
-it("shows every task-card judgment field before confirmation", () => {
+it("shows every task-card judgment field after opening its summary", async () => {
+  const user = userEvent.setup();
   render(<App />);
+  await user.click(screen.getByText("글과 그림 부착", { selector: ".task-card__summary-title" }));
   const card = screen.getByRole("article", { name: "글과 그림 부착" });
   expect(within(card).getByText("예상 시간 2단위")).toBeVisible();
   expect(within(card).getByText(/먼저: 글 인쇄, 그림 배치 준비/)).toBeVisible();
@@ -73,10 +126,9 @@ it("uses exactly one active pulse target", () => {
 
 it("shows transparent goals, human-centered guidance, and save default off", () => {
   render(<App />);
-  expect(screen.getByText(/명령을 한 줄씩 실행하거나 물건을 나누는 활동이 아니라/)).toBeVisible();
-  expect(screen.getByText(/도움 요청·확인·휴식은 낭비가 아닙니다/)).toBeVisible();
-  expect(screen.getByText(/목표 시간 11단위/)).toBeVisible();
-  expect(screen.getByText(/유일한 정답이 아닌 목표/)).toBeVisible();
+  expect(screen.getByText(/도움 요청·확인·휴식도 책임 있는 협력/)).toBeVisible();
+  expect(screen.getByText(/11단위 안에 끝내 보세요/)).toBeVisible();
+  expect(screen.getByText(/유일한 정답은 아니에요/)).toBeVisible();
   expect(screen.getByRole("checkbox", { name: "이 기기에 진행 저장" })).not.toBeChecked();
 });
 

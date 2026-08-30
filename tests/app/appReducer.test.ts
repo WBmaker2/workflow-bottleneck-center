@@ -74,13 +74,14 @@ describe("learning-state reducer", () => {
     expect(canEnterStage(attempt, "analysis")).toBe(false);
     expect(getRequiredAction(attempt)).toBe("confirm-conditions");
     const afterConditions = { ...attempt, stage: "relations" as const, conditionsAcknowledged: true };
-    expect(getRequiredAction(afterConditions)).toBe(null);
+    expect(getRequiredAction(afterConditions)).toBe("confirm-relations");
   });
 
   it("returns stage-specific required actions", () => {
     const state = createInitialState();
     const base = state.attempts["science-display"]!;
     expect(getRequiredAction(base)).toBe("confirm-conditions");
+    expect(getRequiredAction({ ...base, stage: "relations", conditionsAcknowledged: true })).toBe("confirm-relations");
     expect(getRequiredAction({ ...base, stage: "schedule", conditionsAcknowledged: true })).toBe("run-simulation");
     expect(getRequiredAction({ ...base, stage: "analysis" })).toBe("mark-bottleneck");
     expect(getRequiredAction({ ...base, stage: "revision" })).toBe("compare-revision");

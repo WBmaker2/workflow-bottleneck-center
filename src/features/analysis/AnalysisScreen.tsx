@@ -3,6 +3,7 @@ import type { AttemptSnapshot } from "../../app/appTypes";
 import { RequiredActionButton } from "../../components/RequiredActionButton";
 import { LiveStatus } from "../../components/LiveStatus";
 import type { ScenarioDefinition, WaitReason } from "../../domain/types";
+import { learnerCopy } from "../../data/learnerCopy";
 import { BottleneckPanel } from "./BottleneckPanel";
 
 export interface AnalysisScreenProps {
@@ -47,8 +48,14 @@ export function AnalysisScreen({ scenario, snapshot, prediction, predictionExpla
   return (
     <section className="analysis-screen" aria-labelledby="analysis-screen-title">
       <h2 id="analysis-screen-title">병목 분석</h2>
-      <p>실행 기록을 살펴보고, 단순히 오래 걸린 작업이 아니라 뒤 작업을 늦춘 원인을 찾아보세요.</p>
+      <p className="analysis-learner-term"><strong>{learnerCopy.analysisTerms.bottleneck}</strong></p>
+      <p>{learnerCopy.analysisTerms.bottleneckDescription}</p>
       <p className="analysis-total">전체 대기: {snapshot.bottlenecks.totalWaitUnits}단위</p>
+      <section className="analysis-observation-card" aria-labelledby="analysis-observation-title">
+        <h3 id="analysis-observation-title">실행 기록 관찰</h3>
+        <p>원인과 늦어진 작업, 대기 시간을 함께 비교한 뒤 병목을 선택하세요.</p>
+        <p><strong>기다림</strong> {snapshot.bottlenecks.totalWaitUnits}단위 · <strong>선택 상태</strong> {selectedFindingId ? "병목 선택됨" : "아직 선택하지 않음"}</p>
+      </section>
       <BottleneckPanel
         analysis={snapshot.bottlenecks}
         selectedFindingId={localFindingId}
@@ -59,16 +66,16 @@ export function AnalysisScreen({ scenario, snapshot, prediction, predictionExpla
         }}
       />
       {selectedFinding && <section className="selected-finding" aria-labelledby="selected-finding-title">
-        <h3 id="selected-finding-title">선택한 병목 근거</h3>
+        <h3 id="selected-finding-title">선택한 {learnerCopy.analysisTerms.cause}</h3>
         <p><b>원인</b> {selectedFinding.blockerLabel}</p>
         <p><b>실제 지연</b> {selectedFinding.delayUnits}단위</p>
         <p><b>설명</b> {selectedFinding.explanation}</p>
-        <p><b>인과·영향 경로</b> {taskPath}</p>
+        <p><b>{learnerCopy.analysisTerms.path}</b> {taskPath}</p>
       </section>}
       <section className="prediction-record" aria-labelledby="prediction-record-title">
-        <h3 id="prediction-record-title">내 예측과 실행 기록</h3>
+        <h3 id="prediction-record-title">{learnerCopy.analysisTerms.prediction}</h3>
         <dl>
-          <div><dt>내 예측</dt><dd>{prediction ? reasonLabel[prediction] : "예측하지 않음"}{predictionExplanation ? ` — ${predictionExplanation}` : ""}</dd></div>
+          <div><dt>{learnerCopy.analysisTerms.prediction}</dt><dd>{prediction ? reasonLabel[prediction] : "예측하지 않음"}{predictionExplanation ? ` — ${predictionExplanation}` : ""}</dd></div>
           <div><dt>실행 기록</dt><dd>{selectedFinding ? `${selectedFinding.blockerLabel} 때문에 ${selectedFinding.delayUnits}단위 기다림이 기록되었습니다.` : "기다림 없음"}</dd></div>
         </dl>
       </section>

@@ -1,6 +1,7 @@
 import { useMemo, type RefObject } from "react";
 import type { DependencyEdge, RelationValidation, ScenarioDefinition, ConditionKind } from "../../domain/types";
 import { requiredEdgesFromScenario } from "../../domain/scenarioValidation";
+import { RelationRequirementList } from "./RelationRequirementList";
 
 export interface RelationBoardProps {
   scenario: ScenarioDefinition;
@@ -8,6 +9,7 @@ export interface RelationBoardProps {
   validation: RelationValidation;
   listHeadingRef?: RefObject<HTMLHeadingElement | null>;
   onRemove?: (edge: DependencyEdge, sourceIndex?: number) => void;
+  showRequirements?: boolean;
 }
 
 type EdgeKind = ConditionKind;
@@ -96,7 +98,7 @@ const getDepths = (scenario: ScenarioDefinition, allEdges: readonly DependencyEd
   return depths;
 };
 
-export function RelationBoard({ scenario, edges, validation, listHeadingRef, onRemove }: RelationBoardProps) {
+export function RelationBoard({ scenario, edges, validation, listHeadingRef, onRemove, showRequirements = true }: RelationBoardProps) {
   const required = useMemo(() => requiredEdgesFromScenario(scenario), [scenario]);
   const missingKeys = new Set(validation.missingRequired.map(edgeKey));
   const orderedEdges = orderEdges(scenario, edges);
@@ -116,8 +118,9 @@ export function RelationBoard({ scenario, edges, validation, listHeadingRef, onR
   });
 
   return (
-    <section className="relation-board" aria-labelledby="relation-list-title">
-      <h3 id="relation-list-title" ref={listHeadingRef} tabIndex={-1}>연결한 관계 {edges.length}개</h3>
+    <section className="relation-board" aria-labelledby="relation-board-title">
+      <h3 id="relation-board-title">학생이 만든 관계</h3>
+      <h4 id="relation-list-title" ref={listHeadingRef} tabIndex={-1}>연결한 관계 {edges.length}개</h4>
       <p>아래 순서 목록이 관계의 정확한 설명입니다. 선과 색은 이해를 돕는 보조 표시입니다.</p>
       <ol className="relation-list">
         {orderedEdges.map((record) => {
@@ -133,6 +136,7 @@ export function RelationBoard({ scenario, edges, validation, listHeadingRef, onR
           );
         })}
       </ol>
+      {showRequirements && <RelationRequirementList scenario={scenario} missing={validation.missingRequired} headingId="relation-requirements-title" />}
       <svg className="relation-graph" viewBox="0 0 1020 540" role="img" aria-label="관계 연결 보조 그림" aria-hidden="true">
         <defs>
           <marker id={`relation-arrow-${scenario.id}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">

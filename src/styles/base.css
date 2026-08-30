@@ -66,13 +66,13 @@ button {
 
 button:not(:disabled):hover {
   border-color: var(--color-primary);
-  background: #edf5fc;
+  background: var(--color-primary-bg);
 }
 
 button:disabled {
   cursor: not-allowed;
   color: var(--color-ink-muted);
-  background: #edf0f2;
+  background: var(--color-disabled-bg);
 }
 
 button:focus-visible,
@@ -178,7 +178,7 @@ td {
 }
 
 th {
-  background: #edf3f7;
+  background: var(--color-table-header-bg);
 }
 
 .visually-hidden {

@@ -54,6 +54,11 @@ export function RevisionScreen({ scenario, initialSnapshot, revisedSchedule, rev
     <section className="revision-screen" aria-labelledby="revision-screen-title">
       <h2 id="revision-screen-title">일정 수정</h2>
       <p>선택한 병목을 줄이되 안전·품질·역할 조건을 함께 지키는 수정안을 만들어 보세요.</p>
+      <section className="revision-observation-card" aria-labelledby="revision-observation-title">
+        <h3 id="revision-observation-title">수정 전 관찰</h3>
+        <p>바꿀 작업을 고르고, 시간 변화와 안전·품질·역할 공정성을 함께 확인합니다.</p>
+        <p><strong>최초 시간</strong> {initialSnapshot.evaluation.metrics.finishTime}단위 · <strong>최초 대기</strong> {initialSnapshot.evaluation.metrics.totalWaitUnits}단위</p>
+      </section>
       <ScheduleEditor scenario={scenario} draft={draft} onChange={onChange} showPlacementStatus={false} />
       <LiveStatus message={message} />
       <RequiredActionButton actionId="compare-revision" activeActionId={canCompare && comparison === null ? "compare-revision" : null} disabled={!canCompare} onClick={compare}>수정안 실행·비교</RequiredActionButton>
@@ -62,6 +67,7 @@ export function RevisionScreen({ scenario, initialSnapshot, revisedSchedule, rev
           {failures.length > 0 && <section className="revision-failure" role="alert" aria-labelledby="revision-failure-title"><h3 id="revision-failure-title">완료 조건을 먼저 확인하세요</h3><p>완료 조건이 충족되지 않았습니다.</p><ul>{failures.map((failure) => <li key={failure}>{failure}</li>)}</ul></section>}
           {failures.length === 0 && <p className="revision-summary">{comparison.summary}</p>}
           <AttemptComparisonTable initial={initialSnapshot} revised={revisedSnapshot} comparison={comparison} />
+          <p className="revision-comparison-note" role="status">비교 카드에서 시간뿐 아니라 안전·품질·역할 조건의 보존 상태를 확인하세요.</p>
           {failures.length === 0 && <button type="button" onClick={onReport}>보고서 작성</button>}
         </>
       )}

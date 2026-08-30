@@ -50,7 +50,7 @@ const progressFor = (stage: LearningStage): AppProgressV1 => {
     }])),
   } as AppProgressV1;
   const attempt = encoded.attempts[scenario.id] as PersistedMissionAttempt;
-  const draft = stage === "report" ? successfulReportFixture() : scheduleFixture();
+  const draft = stage === "report" || stage === "simulation" ? successfulReportFixture() : scheduleFixture();
   const result = simulateSchedule(scenario, draft);
   attempt.stage = stage;
   attempt.conditionsAcknowledged = stage !== "briefing";
@@ -86,14 +86,17 @@ for (const stage of stages) {
   test(`375px ${stage} stays a single accessible workspace`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: storageKey, value: JSON.stringify(progressFor(stage)) });
-    await page.goto("/");
+    await page.goto("./");
 
     await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName("작업 순서 병목 해결소");
     await expect(page.getByText(`현재 단계: ${stageLabel[stage]}`)).toBeVisible();
     const ownedScreen = page.locator(stageOwnedScreen[stage].selector);
     await expect(ownedScreen).toBeVisible();
-    await expect(ownedScreen.getByRole("heading", { name: stageOwnedScreen[stage].heading })).toBeVisible();
-    await expect(page.getByRole("button", { name: "업데이트 내역" })).toBeInViewport();
+    await expect(ownedScreen.getByRole("heading", { name: stageOwnedScreen[stage].heading, exact: true })).toBeVisible();
+    const footer = page.locator("footer.app-footer");
+    const updateTrigger = footer.getByRole("button", { name: "업데이트 내역", exact: true });
+    await expect(footer).toContainText("업데이트 내역");
+    await expect(updateTrigger).toHaveCSS("position", "static");
     await expect(page.getByRole("button", { name: /단계 목록 보기|요약 보기/ }).first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 
@@ -110,7 +113,7 @@ for (const stage of stages) {
     expect(parseFloat(outline)).toBeGreaterThanOrEqual(3);
 
     if (stage === "relations" || stage === "schedule") {
-      const workspace = page.locator(stage === "relations" ? ".relation-board" : ".timeline-grid-section");
+      const workspace = page.locator(stage === "relations" ? ".relation-board" : ".timeline-step-list");
       const summary = page.locator(".app-stage-summary");
       const workspaceBox = await workspace.boundingBox();
       const summaryBox = await summary.boundingBox();
@@ -125,7 +128,7 @@ test("desktop relation and schedule stages use one workspace track", async ({ pa
   for (const stage of ["relations", "schedule"] as const) {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: storageKey, value: JSON.stringify(progressFor(stage)) });
-    await page.goto("/");
+    await page.goto("./");
     await expect(page.locator(stageOwnedScreen[stage].selector)).toBeVisible();
     const trackCount = await page.locator(".stage-layout").evaluate((element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length);
     expect(trackCount).toBe(1);
@@ -134,17 +137,24 @@ test("desktop relation and schedule stages use one workspace track", async ({ pa
 
 test("motion reduction keeps the simulation manual", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: storageKey, value: JSON.stringify(progressFor("simulation")) });
-  await page.goto("/");
-  await expect(page.locator("[data-reduced-motion='false']")).toBeVisible();
-  await expect(page.getByRole("button", { name: "가상 실행 시작" })).toBeVisible();
+  await page.goto("./");
+  await expect(page.locator("[data-reduced-motion='true']")).toBeVisible();
+  await expect(page.getByRole("button", { name: "다음 단계" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "가상 실행 시작" })).toHaveCount(0);
+  const timeline = page.getByRole("heading", { name: "가상 시간 0단위 정지 화면", exact: true });
+  await expect(timeline).toBeVisible();
+  await page.getByRole("button", { name: "다음 단계" }).click();
+  await expect(page.getByRole("heading", { name: "가상 시간 1단위 정지 화면", exact: true })).toBeVisible();
+  await expect(timeline).toHaveCount(0);
   expect(scheduleStartUpperBound(scenario)).toBeGreaterThan(0);
 });
 
 test("captures representative classroom board screenshots", async ({ page }) => {
   await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: storageKey, value: JSON.stringify(progressFor("briefing")) });
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/");
+  await page.goto("./");
   await page.screenshot({ path: "output/playwright/task-13-briefing-375.png", fullPage: true });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.screenshot({ path: "output/playwright/task-13-briefing-desktop.png", fullPage: true });

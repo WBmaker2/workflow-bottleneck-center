@@ -1,4 +1,5 @@
 import type { BottleneckAnalysis, ScenarioDefinition } from "../../domain/types";
+import { learnerCopy } from "../../data/learnerCopy";
 
 export interface BottleneckPanelProps {
   analysis: BottleneckAnalysis;
@@ -21,9 +22,9 @@ export function BottleneckPanel({ analysis, selectedFindingId, onSelect, scenari
 
   return (
     <section className="bottleneck-panel" aria-labelledby="bottleneck-panel-title">
-      <h3 id="bottleneck-panel-title">기다림에서 병목 찾기</h3>
+      <h3 id="bottleneck-panel-title">{learnerCopy.analysisTerms.cause}</h3>
       <p>긴 작업이라고 모두 병목은 아닙니다.</p>
-      <p>뒤 작업의 시작을 늦춘 원인을 고르세요.</p>
+      <p>{learnerCopy.analysisTerms.bottleneckDescription}</p>
       <div className="bottleneck-cards" role="radiogroup" aria-label="병목 원인 선택">
         {analysis.findings.map((finding, index) => {
           const titleFor = (taskId: string) => scenario?.tasks.find((task) => task.id === taskId)?.title ?? "해당 작업";

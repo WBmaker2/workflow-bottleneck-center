@@ -1,10 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { completeMissionByKeyboard, installKeyboardSelectSupport, missionSolutions } from "./fixtures/missionSolutions";
+import { completeMissionByKeyboard, missionSolutions } from "./fixtures/missionSolutions";
 
 test("print media keeps only the teacher summary and hides report controls", async ({ page }) => {
   await page.addInitScript(() => localStorage.removeItem("workflow-bottleneck-center:progress:v1"));
-  await installKeyboardSelectSupport(page);
-  await page.goto("/");
+  await page.goto("./");
   await completeMissionByKeyboard(page, missionSolutions["science-display"]);
 
   await expect(page.getByRole("heading", { name: "교사용 요약" })).toBeVisible();
