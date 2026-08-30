@@ -107,8 +107,17 @@ npm run verify
 
 - 코드 파일은 기능별 책임을 분리하며 `src`, `tests`, `e2e`, `scripts`의 `.ts`, `.tsx`, `.css`, `.mjs` 파일은 500줄이 되기 전에 나눕니다. 검사 기준은 **499줄 이하**입니다.
 - 화면이나 판정 규칙을 바꿀 때는 `src/data/updateHistory.ts`에 실제 변경 날짜(`YYYY-MM-DD`)와 짧은 내역을 추가합니다. 앱의 업데이트 내역 버튼은 이 기록을 보여 줍니다.
-- 최신 개선 기록(2026-08-28): 학습자 안내·모바일 탐색 흐름을 개선하고 375px·키보드·reduced-motion·외부 요청·인쇄 회귀 게이트를 정리했습니다.
+- 최신 개선 기록(2026-08-29): 공통 마스트헤드·7단계 진행 트랙·미션 요약·활동별 관찰 카드와 모바일 읽기 순서를 개선하고 375px·키보드·reduced-motion·외부 요청·인쇄 회귀 게이트를 보강했습니다.
+- 최신 보완 기록(2026-08-30): 상태를 나타내는 두꺼운 좌측 포인트 테두리를 상단 경계·배경 토큰으로 정돈하고 근거 진행률을 레이아웃 폭 전환 없이 transform으로 움직이도록 다듬었습니다.
 - 안전·품질·역할 공정성의 근거는 화면과 테스트에서 함께 확인하며, 실제 사람에 대한 승인·측정·순위를 주장하지 않습니다.
+
+이번 안전 리디자인의 감사·계획·자산·검증 원장은 다음 문서에 기록되어 있습니다.
+
+- `PRODUCT.md`
+- `work/education-webapp-redesign-audit.md`
+- `work/education-webapp-redesign-plan.md`
+- `work/education-webapp-redesign-assets.md`
+- `work/education-webapp-redesign-report.md`
 
 ## 범위 밖 기능과 현재 계획의 경계
 

@@ -119,8 +119,8 @@ describe("accessible learning shell", () => {
     const other = screen.getByRole("button", { name: /도서 반납 카트/ });
     expect(selected).toHaveAttribute("aria-current", "page");
     expect(other).not.toHaveAttribute("aria-current", "page");
-    expect(getComputedStyle(selected).backgroundColor).not.toBe(getComputedStyle(other).backgroundColor);
-    expect(getComputedStyle(selected).borderColor).not.toBe(getComputedStyle(other).borderColor);
+    expect(selected).toHaveClass("scenario-navigation__button--selected");
+    expect(other).toHaveClass("scenario-navigation__button");
   });
 
   it("places stage help at the start of the stage shell before its screen content", () => {

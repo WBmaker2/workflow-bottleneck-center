@@ -51,6 +51,11 @@ export function AnalysisScreen({ scenario, snapshot, prediction, predictionExpla
       <p className="analysis-learner-term"><strong>{learnerCopy.analysisTerms.bottleneck}</strong></p>
       <p>{learnerCopy.analysisTerms.bottleneckDescription}</p>
       <p className="analysis-total">전체 대기: {snapshot.bottlenecks.totalWaitUnits}단위</p>
+      <section className="analysis-observation-card" aria-labelledby="analysis-observation-title">
+        <h3 id="analysis-observation-title">실행 기록 관찰</h3>
+        <p>원인과 늦어진 작업, 대기 시간을 함께 비교한 뒤 병목을 선택하세요.</p>
+        <p><strong>기다림</strong> {snapshot.bottlenecks.totalWaitUnits}단위 · <strong>선택 상태</strong> {selectedFindingId ? "병목 선택됨" : "아직 선택하지 않음"}</p>
+      </section>
       <BottleneckPanel
         analysis={snapshot.bottlenecks}
         selectedFindingId={localFindingId}

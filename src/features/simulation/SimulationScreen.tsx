@@ -139,6 +139,11 @@ export function SimulationScreen({ scenario, snapshot, reducedMotion: requestedR
     <section className="simulation-screen" aria-labelledby="simulation-screen-title" data-reduced-motion={reducedMotion ? "true" : "false"}>
       <h2 id="simulation-screen-title">가상 실행</h2>
       <p>미리 계산된 실행 기록을 시간 단위별로 살펴봅니다. 실제 작업 시간의 측정값이 아닙니다.</p>
+      <section className="simulation-observation-card" aria-labelledby="simulation-observation-title">
+        <h3 id="simulation-observation-title">지금 관찰할 것</h3>
+        <p><strong>현재 시간</strong> {playback.currentTime}단위 · <strong>실행 상태</strong> {playback.mode === "idle" ? "시작 전" : playback.mode === "complete" ? "완료" : playback.mode === "paused" ? "일시 정지" : "진행 중"}</p>
+        <p>{playback.predictionRequired ? "기다림이 나타났어요. 멈춘 까닭을 먼저 예상해 보세요." : waits.length > 0 ? "시간을 움직이며 작업 시작·완료와 기다림을 살펴보세요." : "작업이 시작하고 끝나는 순서를 살펴보세요."}</p>
+      </section>
       <SimulationTimeline scenario={scenario} snapshot={snapshot} currentTime={playback.currentTime} reducedMotion={reducedMotion} />
       <SimulationControls finishTime={finishTime} playback={playback} reducedMotion={reducedMotion} onPlay={play} onPause={() => setPlayback((previous) => ({ ...previous, mode: "paused" }))} onNext={advance} onReset={reset} />
       <LiveStatus message={announcement} />

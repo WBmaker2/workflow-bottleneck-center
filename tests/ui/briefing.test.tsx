@@ -37,9 +37,9 @@ it("progressively reveals the learner briefing", () => {
   expect(details.slice(1).every((detail) => !detail.open)).toBe(true);
   const summary = screen.getByRole("region", { name: "작업 핵심 조건 요약" });
   const cta = screen.getByRole("button", { name: "조건 확인" });
-  expect(summary.nextElementSibling).toBe(cta);
+  expect(summary.previousElementSibling).toBe(cta);
   expect(cta).toBeVisible();
-  expect(screen.getByText(/이 버튼을 누르면 관계 연결로 이동/)).toBeVisible();
+  expect(screen.getByText(/다음 행동: 조건을 읽고/)).toBeVisible();
   expect(screen.getAllByText(/모든 시간은 교육용/)).toHaveLength(1);
 });
 
@@ -126,10 +126,9 @@ it("uses exactly one active pulse target", () => {
 
 it("shows transparent goals, human-centered guidance, and save default off", () => {
   render(<App />);
-  expect(screen.getByText(/명령을 한 줄씩 실행하거나 물건을 나누는 활동이 아니라/)).toBeVisible();
-  expect(screen.getByText(/도움 요청·확인·휴식은 낭비가 아닙니다/)).toBeVisible();
-  expect(screen.getByText(/목표 시간 11단위/)).toBeVisible();
-  expect(screen.getByText(/유일한 정답이 아닌 목표/)).toBeVisible();
+  expect(screen.getByText(/도움 요청·확인·휴식도 책임 있는 협력/)).toBeVisible();
+  expect(screen.getByText(/11단위 안에 끝내 보세요/)).toBeVisible();
+  expect(screen.getByText(/유일한 정답은 아니에요/)).toBeVisible();
   expect(screen.getByRole("checkbox", { name: "이 기기에 진행 저장" })).not.toBeChecked();
 });
 

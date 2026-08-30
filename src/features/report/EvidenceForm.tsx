@@ -193,21 +193,24 @@ export const EvidenceForm = forwardRef<EvidenceFormHandle, EvidenceFormProps>(fu
     <p>선택한 조건과 짧은 설명으로 근거를 완성하세요.</p>
     <EvidenceProgress completed={completedEvidenceCount} total={evidenceFields.length} />
     <fieldset>
-      <legend>선행 관계 근거</legend>
+      <legend><span aria-hidden="true">1. </span>선행 관계 근거</legend>
+      <p className="evidence-step-status">1번 근거 · {evidenceValues.dependencyExplanation ? "완료" : "작성 중"}</p>
       <p>___ 작업이 끝나야 ___ 작업을 시작할 수 있는 이유는 ___입니다.</p>
       <p className="evidence-example">예시: {evidenceExamples.dependencyExplanation}</p>
       <p className="evidence-next">다음에 채울 칸: {nextHint("dependencyExplanation")}</p>
       {saved("dependencyExplanation")}{taskSelect("선행 작업 선택", form.dependencyBefore, "dependencyBefore")}{taskSelect("시작 작업 선택", form.dependencyAfter, "dependencyAfter")}{reasonSelect("선행 이유 선택", dependencyReasons, form.dependencyReason, "dependencyReason")}{reasoning("선행 관계 설명", form.dependencyText, "dependencyText")}
     </fieldset>
     <fieldset>
-      <legend>병렬 관계 근거</legend>
+      <legend><span aria-hidden="true">2. </span>병렬 관계 근거</legend>
+      <p className="evidence-step-status">2번 근거 · {evidenceValues.parallelExplanation ? "완료" : "작성 중"}</p>
       <p>___ 작업과 ___ 작업을 함께 할 수 있는 이유는 ___입니다.</p>
       <p className="evidence-example">예시: {evidenceExamples.parallelExplanation}</p>
       <p className="evidence-next">다음에 채울 칸: {nextHint("parallelExplanation")}</p>
       {saved("parallelExplanation")}{taskSelect("함께 할 첫 작업", form.parallelFirst, "parallelFirst")}{taskSelect("함께 할 둘째 작업", form.parallelSecond, "parallelSecond")}{reasonSelect("병렬 이유 선택", parallelReasons, form.parallelReason, "parallelReason")}{reasoning("병렬 관계 설명", form.parallelText, "parallelText")}{form.parallelFirst && form.parallelSecond && !parallelValid(form) && <p className="evidence-validation">필수 선행 경로가 있는 두 작업은 함께 할 수 없습니다.</p>}
     </fieldset>
     <fieldset>
-      <legend>병목 근거</legend>
+      <legend><span aria-hidden="true">3. </span>병목 근거</legend>
+      <p className="evidence-step-status">3번 근거 · {evidenceValues.bottleneckExplanation ? "완료" : "작성 중"}</p>
       <p className="evidence-learner-term">{learnerCopy.analysisTerms.cause}: 어떤 원인 때문에 뒤 작업이 기다렸는지 적어 보세요.</p>
       <p>___ 때문에 ___ 작업이 ___단위 기다렸습니다.</p>
       <p className="evidence-example">예시: {evidenceExamples.bottleneckExplanation}</p>
@@ -215,7 +218,8 @@ export const EvidenceForm = forwardRef<EvidenceFormHandle, EvidenceFormProps>(fu
       {saved("bottleneckExplanation")}{findings.length === 0 ? <><p>이번 실행에는 표시된 병목과 기다림이 없습니다.</p>{taskSelect("기다림을 설명할 작업 선택", form.bottleneckTaskId, "bottleneckTaskId")}<p>표시된 기다림: 0단위</p><label>기다림 단위 선택<select aria-label="기다림 단위 선택" value={form.bottleneckUnits} onChange={(event) => update("bottleneckUnits", event.target.value)}><option value="0">0단위</option></select></label></> : <><label>병목 원인 선택<select aria-label="병목 원인 선택" value={form.bottleneckFindingId} onChange={(event) => update("bottleneckFindingId", event.target.value)}><option value="">선택하세요</option>{findings.map((finding) => <option key={finding.id} value={finding.id}>{finding.blockerLabel} · {titleFor(scenario, finding.blockedTaskId)}</option>)}</select></label>{selectedFinding && <p>표시된 실제 지연: {selectedFinding.delayUnits}단위</p>}<label>기다림 단위 선택<select aria-label="기다림 단위 선택" value={form.bottleneckUnits} onChange={(event) => update("bottleneckUnits", event.target.value)}><option value="">선택하세요</option>{Array.from({ length: Math.max(6, ...findings.map((finding) => finding.delayUnits + 2)) }, (_, index) => <option value={index} key={index}>{index}단위</option>)}</select></label></>}{reasoning("병목 근거 설명", form.bottleneckText, "bottleneckText")}
     </fieldset>
     <fieldset>
-      <legend>절충 근거</legend>
+      <legend><span aria-hidden="true">4. </span>절충 근거</legend>
+      <p className="evidence-step-status">4번 근거 · {evidenceValues.tradeoffExplanation ? "완료" : "작성 중"}</p>
       <p>___을 바꾸어 시간/대기가 ___했고, 안전·품질·역할 공정성은 ___했습니다.</p>
       <p className="evidence-example">예시: {evidenceExamples.tradeoffExplanation}</p>
       <p className="evidence-next">다음에 채울 칸: {nextHint("tradeoffExplanation")}</p>

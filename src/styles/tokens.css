@@ -13,6 +13,19 @@
   --color-wait: #986b19;
   --color-line: #c7d0d9;
   --color-line-strong: #9aa8b5;
+  --color-info-bg: #f5f9fd;
+  --color-selected-bg: #e4f0fb;
+  --color-wait-bg: #fff8e8;
+  --color-quality-bg: #f5f8ed;
+  --color-primary-bg: #edf5fc;
+  --color-safety-bg: #fff0eb;
+  --color-constraints-bg: #fff8ef;
+  --color-list-bg: #f4f8fb;
+  --color-graph-bg: #f7fafc;
+  --color-table-header-bg: #edf3f7;
+  --color-progress-track: #d8e4ee;
+  --color-report-bg: #f8faef;
+  --color-disabled-bg: #edf0f2;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -24,6 +37,8 @@
   --radius-md: 16px;
   --radius-lg: 20px;
   --content-width: 76rem;
+  --rail-width: 18rem;
+  --stage-gap: var(--space-5);
   --reading-width: 48rem;
   --control-height: 2.75rem;
   --safe-bottom: env(safe-area-inset-bottom, 0px);

@@ -6,6 +6,7 @@ import { LiveStatus } from "../../components/LiveStatus";
 import { RelationBoard } from "./RelationBoard";
 import { RelationEditor } from "./RelationEditor";
 import { RequiredActionButton } from "../../components/RequiredActionButton";
+import { RelationRequirementList } from "./RelationRequirementList";
 
 export interface RelationScreenProps {
   scenario: ScenarioDefinition;
@@ -77,9 +78,10 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
       <p>작업 카드를 읽고 먼저 끝낼 작업과 다음에 시작할 작업을 연결하세요. 함께 할 수 있는 작업은 연결하지 않아도 됩니다.</p>
       <div className="stage-layout">
         <div className="stage-workspace">
+          <RelationRequirementList scenario={scenario} missing={validation.missingRequired} headingId="relation-requirements-title" />
           <RelationEditor scenario={scenario} edges={edges} onChange={addOrRemove} />
+          <RelationBoard showRequirements={false} scenario={scenario} edges={edges} validation={validation} listHeadingRef={listHeadingRef} onRemove={(edge, sourceIndex) => addOrRemove(edges.filter((item, index) => sourceIndex === undefined ? item.beforeTaskId !== edge.beforeTaskId || item.afterTaskId !== edge.afterTaskId : index !== sourceIndex))} />
           <LiveStatus message={announcement} />
-          <RelationBoard scenario={scenario} edges={edges} validation={validation} listHeadingRef={listHeadingRef} onRemove={(edge, sourceIndex) => addOrRemove(edges.filter((item, index) => sourceIndex === undefined ? item.beforeTaskId !== edge.beforeTaskId || item.afterTaskId !== edge.afterTaskId : index !== sourceIndex))} />
         </div>
       </div>
       {hasValidated && messages.length > 0 && (

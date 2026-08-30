@@ -59,6 +59,17 @@ const expectStageHelp = async (page: import("@playwright/test").Page, expected: 
   await expect(panel.locator("dd").nth(1)).toHaveText(expected.successHint);
 };
 
+test("first render exposes the seven-step masthead contract without document overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("./");
+  await expect(page.getByTestId("stage-progress").locator("li")).toHaveCount(7);
+  await expect(page.getByTestId("stage-progress").locator('[aria-current="step"]')).toHaveCount(1);
+  await expect(page.getByText("먼저 할 일과 함께 할 일을 구분하면 기다림을 줄일 수 있어요.")).toBeVisible();
+  await expect(page.getByText("가상 시간", { exact: true })).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBeLessThanOrEqual(widths.client);
+});
+
 test("375px briefing keeps the first action within the opening viewport flow", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("./");

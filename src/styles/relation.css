@@ -29,8 +29,9 @@
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
-  border-left: 5px solid var(--color-primary);
-  background: #edf5fc;
+  border: 2px solid var(--color-line);
+  border-top: 5px solid var(--color-primary);
+  background: var(--color-primary-bg);
 }
 
 .relation-requirements h3,
@@ -58,7 +59,7 @@
   overflow: visible;
   border: 2px solid var(--color-line);
   border-radius: var(--radius-md);
-  background: #f7fafc;
+  background: var(--color-graph-bg);
 }
 
 .relation-node rect {

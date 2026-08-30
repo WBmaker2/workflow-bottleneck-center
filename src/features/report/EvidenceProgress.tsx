@@ -18,7 +18,7 @@ export function EvidenceProgress({ completed, total }: EvidenceProgressProps) {
       <span>근거 문장 진행률</span>
       <strong>{safeCompleted}/{safeTotal}</strong>
       <span className="evidence-progress__bar" aria-hidden="true">
-        <span style={{ width: `${percentage}%` }} />
+        <span style={{ transform: `scaleX(${percentage / 100})` }} />
       </span>
     </div>
   );

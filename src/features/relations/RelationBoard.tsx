@@ -9,6 +9,7 @@ export interface RelationBoardProps {
   validation: RelationValidation;
   listHeadingRef?: RefObject<HTMLHeadingElement | null>;
   onRemove?: (edge: DependencyEdge, sourceIndex?: number) => void;
+  showRequirements?: boolean;
 }
 
 type EdgeKind = ConditionKind;
@@ -97,7 +98,7 @@ const getDepths = (scenario: ScenarioDefinition, allEdges: readonly DependencyEd
   return depths;
 };
 
-export function RelationBoard({ scenario, edges, validation, listHeadingRef, onRemove }: RelationBoardProps) {
+export function RelationBoard({ scenario, edges, validation, listHeadingRef, onRemove, showRequirements = true }: RelationBoardProps) {
   const required = useMemo(() => requiredEdgesFromScenario(scenario), [scenario]);
   const missingKeys = new Set(validation.missingRequired.map(edgeKey));
   const orderedEdges = orderEdges(scenario, edges);
@@ -135,7 +136,7 @@ export function RelationBoard({ scenario, edges, validation, listHeadingRef, onR
           );
         })}
       </ol>
-      <RelationRequirementList scenario={scenario} missing={validation.missingRequired} headingId="relation-requirements-title" />
+      {showRequirements && <RelationRequirementList scenario={scenario} missing={validation.missingRequired} headingId="relation-requirements-title" />}
       <svg className="relation-graph" viewBox="0 0 1020 540" role="img" aria-label="관계 연결 보조 그림" aria-hidden="true">
         <defs>
           <marker id={`relation-arrow-${scenario.id}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">

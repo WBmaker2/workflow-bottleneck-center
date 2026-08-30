@@ -77,6 +77,7 @@ describe("analysis and revision learning flow", () => {
     } satisfies MissionAttempt;
     const { rerender } = render(<ReportScreen scenario={scenario} attempt={emptyAttempt} onEvidenceChange={() => undefined} onComplete={() => undefined} />);
     expect(screen.getByLabelText("근거 문장 진행률")).toHaveTextContent("0/4");
+    expect(screen.getByLabelText("근거 문장 진행률").querySelector(".evidence-progress__bar > span")).toHaveStyle({ transform: "scaleX(0)" });
     expect(screen.getAllByText(/예시:/)).toHaveLength(4);
     expect(screen.getAllByText(/다음에 채울 칸/)).toHaveLength(4);
     expect(screen.getByRole("heading", { name: "오늘 배운 점" })).toBeVisible();
@@ -93,6 +94,7 @@ describe("analysis and revision learning flow", () => {
     } } satisfies MissionAttempt;
     rerender(<ReportScreen scenario={scenario} attempt={completeAttempt} onEvidenceChange={() => undefined} onComplete={() => undefined} />);
     expect(screen.getByLabelText("근거 문장 진행률")).toHaveTextContent("4/4");
+    expect(screen.getByLabelText("근거 문장 진행률").querySelector(".evidence-progress__bar > span")).toHaveStyle({ transform: "scaleX(1)" });
     const completeButton = screen.getByRole("button", { name: "개선 보고서 완성" });
     expect(completeButton).toBeVisible();
     expect(screen.getByRole("region", { name: "오늘 배운 점" }).compareDocumentPosition(completeButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
