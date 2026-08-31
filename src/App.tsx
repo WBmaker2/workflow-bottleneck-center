@@ -44,7 +44,7 @@ function AppShell() {
         <input type="checkbox" checked={state.saveEnabled} onChange={(event) => dispatch({ type: "SET_SAVE_ENABLED", enabled: event.target.checked })} />
         이 기기에 진행 저장
       </label>
-      <p id="save-toggle-description" className="no-print">선택하면 이 브라우저에 역할 A·B·C의 활동만 저장합니다. 학생 이름이나 온라인 계정은 사용하지 않습니다.</p>
+      <p id="save-toggle-description" className="no-print">이 기기에 역할 A·B·C의 진행만 저장합니다. 학생 이름이나 온라인 계정은 사용하지 않습니다.</p>
       {state.announcement && <LiveStatus message={state.announcement} blocked={state.announcement.includes("안전") || state.announcement.includes("품질")} />}
       <div className="app-workspace">
         <StageProgress currentStage={attempt.stage} />

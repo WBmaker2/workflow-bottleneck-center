@@ -65,8 +65,8 @@ main {
 .stage-progress { min-width: 0; max-width: 100%; overflow: hidden; padding: var(--space-4); border: 2px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-surface); }
 .stage-progress h2 { font-size: 1.15rem; }
 .stage-progress ol { display: grid; gap: var(--space-2); padding: 0; margin: 0; list-style: none; }
-.stage-progress__item { display: grid; grid-template-columns: 2rem minmax(0,1fr) auto; gap: var(--space-2); align-items: center; min-height: var(--control-height); padding: var(--space-2); border-top: 3px solid transparent; color: var(--color-ink-muted); }
-.stage-progress__item--current { border-top-color: var(--color-primary); color: var(--color-ink); background: var(--color-primary-bg); font-weight: 800; }
+.stage-progress__item { display: grid; grid-template-columns: 2rem minmax(0,1fr) auto; gap: var(--space-2); align-items: center; min-height: var(--control-height); padding: var(--space-2); box-shadow: inset 0 3px 0 transparent; color: var(--color-ink-muted); }
+.stage-progress__item--current { box-shadow: inset 0 3px 0 var(--color-primary); color: var(--color-ink); background: var(--color-primary-bg); font-weight: 800; }
 .stage-progress__item--complete { color: var(--color-quality); }
 .stage-progress__number { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--color-disabled-bg); font-weight: 800; }
 .stage-progress__item--current .stage-progress__number { color: white; background: var(--color-primary); }
@@ -204,7 +204,7 @@ main {
   .stage-progress { margin-bottom: var(--space-3); padding: var(--space-2); }
   .stage-progress h2 { margin-bottom: var(--space-1); font-size: 1rem; }
   .stage-progress ol { grid-template-columns: repeat(7, minmax(4rem, 1fr)); gap: 2px; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
-  .stage-progress__item { display: flex; flex-direction: column; min-width: 4rem; min-height: 3.25rem; padding: 2px var(--space-1); border-top: 0; border-bottom: 3px solid transparent; text-align: center; font-size: .78rem; line-height: 1.15; }
+  .stage-progress__item { display: flex; flex-direction: column; min-width: 4rem; min-height: 3.25rem; padding: 2px var(--space-1); box-shadow: none; border-bottom: 3px solid transparent; text-align: center; font-size: .78rem; line-height: 1.15; }
   .stage-progress__item--current { border-bottom-color: var(--color-primary); }
   .stage-progress__item small { font-size: .75rem; }
   .stage-frame { padding: var(--space-3); }

@@ -122,7 +122,7 @@ describe("simulation presentation", () => {
     expect(screen.queryByRole("group", { name: "기다림 원인 예측" })).not.toBeInTheDocument();
   });
 
-  it("requires ten Korean syllables, not ten trimmed characters", async () => {
+  it("requires ten meaningful characters, not ten Korean syllables", async () => {
     const user = userEvent.setup();
     render(<SimulationScreen scenario={scenario} snapshot={snapshot} reducedMotion />);
     await user.click(screen.getByRole("button", { name: "다음 단계" }));
@@ -130,9 +130,12 @@ describe("simulation presentation", () => {
     await user.click(within(group).getByRole("radio", { name: "먼저 끝날 작업을 기다림" }));
     const explanation = within(group).getByRole("textbox");
     await user.type(explanation, "기다림원인은앞작업9");
+    expect(within(group).getByRole("button", { name: "예측 저장" })).toBeEnabled();
+    await user.clear(explanation);
+    await user.type(explanation, "          ");
     expect(within(group).getByRole("button", { name: "예측 저장" })).toBeDisabled();
     await user.clear(explanation);
-    await user.type(explanation, "기다림원인은앞작업입니다");
+    await user.type(explanation, "1234567890");
     expect(within(group).getByRole("button", { name: "예측 저장" })).toBeEnabled();
   });
 

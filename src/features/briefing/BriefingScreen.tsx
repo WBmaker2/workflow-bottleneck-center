@@ -24,9 +24,9 @@ export function BriefingScreen({ scenario, attempt, dispatch }: BriefingScreenPr
     <section className="briefing-screen" aria-labelledby="briefing-title">
       <h2 id="briefing-title">의뢰 접수</h2>
       <p>{scenario.mission}</p>
-      <MissionOverview scenario={scenario} />
       <p className="briefing-next-action">다음 행동: 조건을 읽고 <b>조건 확인</b>을 눌러 관계를 연결합니다.</p>
       <RequiredActionButton actionId="confirm-conditions" activeActionId={activeActionId} onClick={confirmConditions}>조건 확인</RequiredActionButton>
+      <MissionOverview scenario={scenario} />
       <TaskCardSummary scenario={scenario} />
       <section aria-labelledby="task-cards-title">
         <h3 id="task-cards-title">작업 카드</h3>

@@ -37,8 +37,10 @@ it("progressively reveals the learner briefing", () => {
   expect(details.slice(1).every((detail) => !detail.open)).toBe(true);
   const summary = screen.getByRole("region", { name: "작업 핵심 조건 요약" });
   const cta = screen.getByRole("button", { name: "조건 확인" });
-  expect(summary.previousElementSibling).toBe(cta);
+  const overview = screen.getByRole("heading", { name: "이번 미션 한눈에 보기" });
+  expect(cta.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(cta).toBeVisible();
+  expect(summary).toBeVisible();
   expect(screen.getByText(/다음 행동: 조건을 읽고/)).toBeVisible();
   expect(screen.getAllByText(/모든 시간은 교육용/)).toHaveLength(1);
 });

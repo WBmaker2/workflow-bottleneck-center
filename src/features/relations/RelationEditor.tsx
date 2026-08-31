@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { DependencyEdge, ScenarioDefinition } from "../../domain/types";
 
 export interface RelationEditorProps {
@@ -13,12 +13,16 @@ const sameEdge = (left: DependencyEdge, right: DependencyEdge) =>
 export function RelationEditor({ scenario, edges, onChange }: RelationEditorProps) {
   const [beforeTaskId, setBeforeTaskId] = useState("");
   const [afterTaskId, setAfterTaskId] = useState("");
+  const beforeSelectRef = useRef<HTMLSelectElement>(null);
   const duplicate = edges.some((edge) => sameEdge(edge, { beforeTaskId, afterTaskId }));
   const invalidPair = !beforeTaskId || !afterTaskId || beforeTaskId === afterTaskId || duplicate;
 
   const addRelation = () => {
     if (invalidPair) return;
     onChange([...edges, { beforeTaskId, afterTaskId }]);
+    setBeforeTaskId("");
+    setAfterTaskId("");
+    beforeSelectRef.current?.focus();
   };
 
   return (
@@ -29,6 +33,7 @@ export function RelationEditor({ scenario, edges, onChange }: RelationEditorProp
         <select
           id="before-task"
           name="before-task"
+          ref={beforeSelectRef}
           value={beforeTaskId}
           onChange={(event) => setBeforeTaskId(event.target.value)}
         >

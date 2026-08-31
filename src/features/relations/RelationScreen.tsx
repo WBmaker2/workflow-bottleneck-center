@@ -44,11 +44,13 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   const errorSummaryRef = useRef<HTMLElement>(null);
   const previousCount = useRef(edges.length);
+  const editorChangePending = useRef(false);
   const messages = validationMessages(scenario, validation);
 
   useEffect(() => {
     if (previousCount.current !== edges.length) {
-      listHeadingRef.current?.focus();
+      if (!editorChangePending.current) listHeadingRef.current?.focus();
+      editorChangePending.current = false;
       setAnnouncement(`관계 ${edges.length}개가 연결되어 있습니다.`);
       previousCount.current = edges.length;
     }
@@ -61,6 +63,10 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
   const addOrRemove = (nextEdges: readonly DependencyEdge[]) => {
     if (onChange) onChange(nextEdges);
     else dispatch?.({ type: "SET_RELATIONS", edges: nextEdges });
+  };
+  const addFromEditor = (nextEdges: readonly DependencyEdge[]) => {
+    editorChangePending.current = true;
+    addOrRemove(nextEdges);
   };
   const continueToSchedule = () => {
     setHasValidated(true);
@@ -79,7 +85,7 @@ export function RelationScreen({ scenario, attempt, onChange, onContinue, dispat
       <div className="stage-layout">
         <div className="stage-workspace">
           <RelationRequirementList scenario={scenario} missing={validation.missingRequired} headingId="relation-requirements-title" />
-          <RelationEditor scenario={scenario} edges={edges} onChange={addOrRemove} />
+          <RelationEditor scenario={scenario} edges={edges} onChange={addFromEditor} />
           <RelationBoard showRequirements={false} scenario={scenario} edges={edges} validation={validation} listHeadingRef={listHeadingRef} onRemove={(edge, sourceIndex) => addOrRemove(edges.filter((item, index) => sourceIndex === undefined ? item.beforeTaskId !== edge.beforeTaskId || item.afterTaskId !== edge.afterTaskId : index !== sourceIndex))} />
           <LiveStatus message={announcement} />
         </div>
