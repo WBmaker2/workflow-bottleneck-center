@@ -32,6 +32,25 @@ describe("accessible relationship design", () => {
     expect(screen.queryByRole("listitem", { name: /자료 확인 다음에 인쇄 글 정리/ })).not.toBeInTheDocument();
   });
 
+  it("clears relation choices and returns focus for the next connection", async () => {
+    const user = userEvent.setup();
+    renderRelationScreen();
+    const before = screen.getByLabelText("먼저 끝낼 작업");
+    const after = screen.getByLabelText("다음에 시작할 작업");
+    await user.selectOptions(before, "verify-content");
+    await user.selectOptions(after, "prepare-print-file");
+    await user.click(screen.getByRole("button", { name: "관계 연결" }));
+
+    expect(before).toHaveValue("");
+    expect(after).toHaveValue("");
+    expect(before).toHaveFocus();
+
+    await user.selectOptions(after, "print-text");
+    await user.selectOptions(before, "prepare-print-file");
+    await user.click(screen.getByRole("button", { name: "관계 연결" }));
+    expect(screen.getAllByRole("listitem").some((item) => item.textContent?.includes("인쇄 글 정리 다음에 글 인쇄"))).toBe(true);
+  });
+
   it("keeps selects reachable and reports public missing edges and safe extras", async () => {
     const user = userEvent.setup();
     renderRelationScreen();

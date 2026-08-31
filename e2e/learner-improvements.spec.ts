@@ -77,7 +77,7 @@ test("375px briefing keeps the first action within the opening viewport flow", a
   const confirmButton = page.getByRole("button", { name: "조건 확인" });
   await expect(confirmButton).toBeVisible();
   const documentTop = await confirmButton.evaluate((element) => element.getBoundingClientRect().top + window.scrollY);
-  expect(documentTop).toBeLessThan(1800);
+  expect(documentTop).toBeLessThan(900);
 });
 
 test("learner task summary keeps meta and condition copy at a readable 1rem minimum", async ({ page }) => {
@@ -119,6 +119,7 @@ test("scenario navigation exposes one selected scenario with a visible style", a
   await expect(selected).toHaveCount(1);
   await expect(selected).toHaveAttribute("aria-current", "page");
   await expect(selected).toHaveText(/선택됨/);
+  await expect(selected.locator("small")).toHaveText(/선택됨/);
   const selectedStyle = await selected.evaluate((element) => {
     const computed = getComputedStyle(element);
     return { backgroundColor: computed.backgroundColor, borderColor: computed.borderColor };
@@ -237,8 +238,15 @@ test("375px relations show the required meaning list before the helper graph", a
   await page.getByLabel("먼저 끝낼 작업").selectOption("verify-content");
   await page.getByLabel("다음에 시작할 작업").selectOption("prepare-print-file");
   await page.getByRole("button", { name: "관계 연결" }).click();
+  await expect(page.getByLabel("먼저 끝낼 작업")).toHaveValue("");
+  await expect(page.getByLabel("다음에 시작할 작업")).toHaveValue("");
+  await expect(page.getByLabel("먼저 끝낼 작업")).toBeFocused();
+  await page.getByLabel("다음에 시작할 작업").selectOption("print-text");
+  await page.getByLabel("먼저 끝낼 작업").selectOption("prepare-print-file");
+  await page.getByRole("button", { name: "관계 연결" }).click();
   const deleteButton = page.getByRole("button", { name: "자료 확인과 인쇄 글 정리 관계 삭제" });
   await expect(page.locator(".relation-list")).toContainText("자료 확인 다음에 인쇄 글 정리");
+  await expect(page.locator(".relation-list li")).toHaveCount(2);
   await expect(deleteButton).toHaveCount(1);
   await expect(deleteButton).toBeVisible();
 

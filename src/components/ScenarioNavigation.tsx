@@ -28,8 +28,10 @@ export function ScenarioNavigation({ selectedScenarioId, onSelect }: ScenarioNav
                 onClick={() => onSelect(item.id)}
               >
                 <span className="scenario-navigation__title">{item.title}</span>
-                <small className="scenario-navigation__meta">{scenarioNavigationCopy[item.id]}</small>
-                {selected && <span className="scenario-selection-status"> · 선택됨</span>}
+                <small className="scenario-navigation__meta">
+                  <span className="scenario-navigation__constraint">{scenarioNavigationCopy[item.id]}</span>
+                  {selected && <span className="scenario-navigation__status">선택됨</span>}
+                </small>
               </button>
             </li>
           );

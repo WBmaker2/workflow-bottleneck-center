@@ -13,4 +13,5 @@ export const updateHistory: readonly UpdateEntry[] = Object.freeze([
   { date: "2026-08-28", category: "개선", description: "학습자 안내·모바일 탐색 흐름 개선" },
   { date: "2026-08-29", category: "개선", description: "전체 학습 화면 계층과 모바일 읽기 순서 개선" },
   { date: "2026-08-30", category: "개선", description: "상태 강조 테두리와 근거 진행률 움직임 정돈" },
+  { date: "2026-08-31", category: "개선", description: "첫 행동·반복 입력·예측 안내를 초등학생 흐름에 맞게 정돈" },
 ]);

@@ -33,6 +33,8 @@ test.describe("업데이트 내역", () => {
       await expect(dialog.getByText("AppProvider 손상 저장 복구 개선")).toBeVisible();
       await expect(dialog.getByText("2026-08-28")).toHaveCount(1);
       await expect(dialog.getByText("학습자 안내·모바일 탐색 흐름 개선")).toBeVisible();
+      await expect(dialog.getByText("2026-08-31")).toHaveCount(1);
+      await expect(dialog.getByText("첫 행동·반복 입력·예측 안내를 초등학생 흐름에 맞게 정돈")).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(dialog).not.toBeVisible();
       await expect(trigger).toBeFocused();
